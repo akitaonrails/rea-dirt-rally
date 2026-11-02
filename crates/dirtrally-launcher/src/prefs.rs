@@ -96,18 +96,25 @@ fn indent_before(text: &str, at: usize) -> &str {
     }
 }
 
+/// One `<value>` element.
+fn value_element(name: &str, value: &Value) -> String {
+    format!(
+        "<value name=\"{}\" type=\"{}\">{}</value>",
+        escape(name),
+        value.kind(),
+        value.text()
+    )
+}
+
 /// The new elements for `values`, each on its own line at `indent`,
 /// followed by a line break and `close_indent` (the indentation of the
 /// closing tag they go before).
 fn new_values(values: &[(&str, Value)], indent: &str, close_indent: &str) -> String {
     let mut out = String::new();
     for (name, value) in values {
-        out.push_str(&format!(
-            "{indent}<value name=\"{}\" type=\"{}\">{}</value>\n",
-            escape(name),
-            value.kind(),
-            value.text()
-        ));
+        out.push_str(indent);
+        out.push_str(&value_element(name, value));
+        out.push('\n');
     }
     out.push_str(close_indent);
     out
@@ -142,6 +149,13 @@ pub fn set_values(text: &str, path: &[&str], values: &[(&str, Value)]) -> Result
             .take_while(|(have, want)| have == want)
             .count()
     };
+    // Which of `values` this element is, when it sits right in the key at `path`.
+    let wanted = |stack: &[String], element: &BytesStart| {
+        let at_path = stack.len() == path.len() + 1 && matched(stack) == path.len();
+        name_of(element)
+            .filter(|_| at_path)
+            .and_then(|name| values.iter().position(|(n, _)| *n == name))
+    };
     let mut found: Vec<bool> = vec![false; values.len()];
     let mut splices: Vec<Splice> = Vec::new();
     // The value whose text is being read: (index in `values`, text start).
@@ -163,12 +177,7 @@ pub fn set_values(text: &str, path: &[&str], values: &[(&str, Value)]) -> Result
                     }
                     b"key" => stack.push(name_of(&element).unwrap_or_default()),
                     b"value" => {
-                        let at_path =
-                            stack.len() == path.len() + 1 && matched(&stack) == path.len();
-                        let index = name_of(&element)
-                            .filter(|_| at_path)
-                            .and_then(|name| values.iter().position(|(n, _)| *n == name));
-                        if let Some(i) = index {
+                        if let Some(i) = wanted(&stack, &element) {
                             in_value = Some((i, after));
                         }
                         stack.push(String::new());
@@ -178,22 +187,13 @@ pub fn set_values(text: &str, path: &[&str], values: &[(&str, Value)]) -> Result
             }
             Event::Empty(element) if element.name().as_ref() == b"value" => {
                 // <value name="X" type="integer"/>: give it its text.
-                let at_path = stack.len() == path.len() + 1 && matched(&stack) == path.len();
-                if let Some(i) = name_of(&element)
-                    .filter(|_| at_path)
-                    .and_then(|name| values.iter().position(|(n, _)| *n == name))
-                {
+                if let Some(i) = wanted(&stack, &element) {
                     found[i] = true;
                     let (name, value) = values[i];
                     splices.push(Splice {
                         start: before,
                         end: after,
-                        text: format!(
-                            "<value name=\"{}\" type=\"{}\">{}</value>",
-                            escape(name),
-                            value.kind(),
-                            value.text()
-                        ),
+                        text: value_element(name, &value),
                     });
                 }
             }
