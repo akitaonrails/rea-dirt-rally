@@ -7,13 +7,19 @@
 //! keyboard, and a hand-made mapping does not come back on the next start
 //! (docs/RUNTIME_NOTES.md).
 //!
+//! Feral decides which pads are gamepads from its own list,
+//! `share/inputdevices.json`: vendor and product IDs, a type
+//! (`Xbox360Gamepad`) and an SDL mapping. A pad missing from it but known
+//! to SDL as a game controller is not offered at all (the owner's test with
+//! `SDL_GAMECONTROLLERCONFIG`), so the launcher adds pads to that list in
+//! its private copy ([`input_devices`]) instead.
+//!
 //! Linux drivers for modern pads report the standard gamepad layout
 //! (Documentation/input/gamepad.rst): BTN_SOUTH … BTN_THUMBR, sticks on
 //! ABS_X/Y and ABS_RX/RY, triggers on ABS_Z/RZ, the D-pad on ABS_HAT0. For
-//! every connected joystick with that layout, [`mappings`] writes the line
-//! SDL 2.0.5 needs — its GUID (bus, vendor, product, version) and the button
-//! and axis numbers in the order SDL 2.0.5 counts them — for
-//! `SDL_GAMECONTROLLERCONFIG`. A pad without that layout gets no line.
+//! every connected joystick with that layout, [`Pad::layout`] gives the
+//! button and axis numbers in the order SDL 2.0.5 counts them. A pad without
+//! that layout gets no entry.
 
 use std::fs;
 use std::path::Path;
@@ -75,15 +81,6 @@ fn has(bitmap: &str, code: u32) -> bool {
 }
 
 impl Pad {
-    /// SDL 2.0.5's GUID for this device: bus, vendor, product and version,
-    /// each as a little-endian 16-bit value followed by two zero bytes.
-    pub fn guid(&self) -> String {
-        [self.bus, self.vendor, self.product, self.version]
-            .iter()
-            .map(|v| format!("{:02x}{:02x}0000", v & 0xff, v >> 8))
-            .collect()
-    }
-
     /// SDL 2.0.5's number for each button code, in the order it counts
     /// them: `BTN_JOYSTICK..KEY_MAX`, then `BTN_MISC..BTN_JOYSTICK`.
     fn button_index(&self, code: u32) -> Option<usize> {
@@ -101,9 +98,9 @@ impl Pad {
             .position(|c| c == code)
     }
 
-    /// The `SDL_GAMECONTROLLERCONFIG` line, when the pad has the standard
-    /// layout.
-    pub fn mapping(&self) -> Option<String> {
+    /// The SDL mapping fields (`a:b0,b:b1,…`), when the pad has the
+    /// standard layout.
+    pub fn layout(&self) -> Option<String> {
         if self.vendor == 0 || self.product == 0 || self.version == 0 {
             // SDL 2.0.5 then builds the GUID from the name; leave those alone.
             return None;
@@ -120,18 +117,78 @@ impl Pad {
         }
         // The first hat, as SDL numbers its directions.
         parts.extend(["dpup:h0.1", "dpright:h0.2", "dpdown:h0.4", "dpleft:h0.8"].map(String::from));
+        Some(parts.join(","))
+    }
+
+    /// The name without commas or control characters.
+    fn clean_name(&self) -> String {
         let name: String = self
             .name
             .chars()
             .filter(|c| *c != ',' && !c.is_control())
             .collect();
-        Some(format!(
-            "{},{},{},",
-            self.guid(),
-            name.trim(),
-            parts.join(",")
-        ))
+        name.trim().to_owned()
     }
+
+    /// The entry for Feral's `inputdevices.json`, when the pad has the
+    /// standard layout.
+    pub fn feral_entry(&self) -> Option<serde_json::Value> {
+        Some(serde_json::json!({
+            "Name": self.clean_name(),
+            "VendorID": format!("0x{:04x}", self.vendor),
+            "ProductIDs": [format!("0x{:04x}", self.product)],
+            "Category": "Gamepad",
+            "Type": "Xbox360Gamepad",
+            "SDLMapping": self.layout()?,
+        }))
+    }
+}
+
+/// Whether Feral's list already has a device with this vendor and product
+/// (a `"*"` product matches every product of the vendor).
+fn listed(list: &[serde_json::Value], vendor: u16, product: u16) -> bool {
+    let hex = |text: &str| u16::from_str_radix(text.trim().trim_start_matches("0x"), 16).ok();
+    list.iter().any(|entry| {
+        entry["VendorID"].as_str().and_then(hex) == Some(vendor)
+            && entry["ProductIDs"].as_array().is_some_and(|ids| {
+                ids.iter()
+                    .filter_map(serde_json::Value::as_str)
+                    .any(|id| id.trim() == "*" || hex(id) == Some(product))
+            })
+    })
+}
+
+/// Feral's `inputdevices.json` (`original`, the game's own) with an entry
+/// for each pad in `pads` it does not list. The game's text is kept as it
+/// is; new entries go before the closing `]`. A file that is not the JSON
+/// array Feral writes is an error, never guessed at.
+pub fn input_devices(original: &str, pads: &[Pad]) -> Result<String, String> {
+    let list: Vec<serde_json::Value> =
+        serde_json::from_str(original).map_err(|error| format!("inputdevices.json: {error}"))?;
+    let mut added: Vec<serde_json::Value> = Vec::new();
+    for pad in pads {
+        if listed(&list, pad.vendor, pad.product) || listed(&added, pad.vendor, pad.product) {
+            continue;
+        }
+        if let Some(entry) = pad.feral_entry() {
+            added.push(entry);
+        }
+    }
+    if added.is_empty() {
+        return Ok(original.to_owned());
+    }
+    let close = original
+        .rfind(']')
+        .ok_or("inputdevices.json: no closing ]")?;
+    let mut out = original[..close].trim_end().to_owned();
+    for entry in &added {
+        let text = serde_json::to_string_pretty(entry).map_err(|error| error.to_string())?;
+        out.push_str(",\n    ");
+        out.push_str(&text.replace('\n', "\n    "));
+    }
+    out.push('\n');
+    out.push_str(&original[close..]);
+    Ok(out)
 }
 
 fn read(path: &Path) -> Option<String> {
@@ -172,30 +229,6 @@ pub fn pads(class_input: &Path) -> Vec<Pad> {
         .collect()
 }
 
-/// The mapping lines for every standard pad in `pads`, one per GUID.
-pub fn mappings(pads: &[Pad]) -> Vec<String> {
-    let mut lines: Vec<String> = Vec::new();
-    for line in pads.iter().filter_map(Pad::mapping) {
-        if !lines
-            .iter()
-            .any(|l| l.split(',').next() == line.split(',').next())
-        {
-            lines.push(line);
-        }
-    }
-    lines
-}
-
-/// `SDL_GAMECONTROLLERCONFIG` for the game: our lines, then the caller's
-/// own value, which SDL reads last, so a player's own mapping wins.
-pub fn config(ours: &[String], theirs: Option<&str>) -> Option<String> {
-    let mut lines: Vec<&str> = ours.iter().map(String::as_str).collect();
-    if let Some(theirs) = theirs.map(str::trim).filter(|t| !t.is_empty()) {
-        lines.push(theirs);
-    }
-    (!lines.is_empty()).then(|| lines.join("\n"))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -213,60 +246,106 @@ mod tests {
         }
     }
 
+    /// Feral's own entry for the wired Xbox 360 pad (share/inputdevices.json).
+    const X360: &str = "a:b0,b:b1,back:b6,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b8,leftshoulder:b4,leftstick:b9,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b10,righttrigger:a5,rightx:a3,righty:a4,start:b7,x:b2,y:b3";
+
+    fn sorted(mapping: &str) -> Vec<&str> {
+        let mut parts: Vec<&str> = mapping.split(',').filter(|p| !p.is_empty()).collect();
+        parts.sort();
+        parts
+    }
+
     #[test]
-    fn an_xpad_pad_gets_the_standard_mapping_with_sdl_2_0_5_numbers() {
-        assert_eq!(
-            eightbitdo().mapping().unwrap(),
-            "03000000c82d00000b31000014010000,8BitDo Ultimate 2 Wireless Controller,\
-             a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,\
-             leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,\
-             righttrigger:a5,dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8,"
-        );
+    fn an_xpad_pad_gets_feral_s_own_xbox_360_layout() {
+        assert_eq!(sorted(&eightbitdo().layout().unwrap()), sorted(X360));
     }
 
     #[test]
     fn extra_buttons_and_axes_shift_the_numbers_as_sdl_counts_them() {
-        // A pad with BTN_TRIGGER (0x120) before the gamepad buttons, and a
-        // throttle (ABS_THROTTLE 0x06) after the triggers.
-        // BTN_TRIGGER (0x120) is bit 32 of the highest word (bits 256..319).
+        // BTN_TRIGGER (0x120) is bit 32 of the highest word (bits 256..319),
+        // and a throttle (ABS_THROTTLE 0x06) comes after the triggers.
         let mut pad = eightbitdo();
         pad.keys = "7cdb000100000000 0 0 0 0".into();
         pad.abs = "3007f".into();
-        let line = pad.mapping().unwrap();
-        assert!(line.contains(",a:b1,"), "{line}");
-        assert!(line.contains("rightstick:b11,"), "{line}");
-        assert!(line.contains("righttrigger:a5,"), "{line}");
+        let layout = pad.layout().unwrap();
+        assert!(layout.starts_with("a:b1,"), "{layout}");
+        assert!(layout.contains("rightstick:b11,"), "{layout}");
+        assert!(layout.contains("righttrigger:a5,"), "{layout}");
     }
 
     #[test]
-    fn a_wheel_or_odd_device_gets_no_mapping() {
+    fn a_wheel_or_odd_device_gets_no_entry() {
         let mut wheel = eightbitdo();
         wheel.abs = "3".into(); // only X and Y, no hat
-        assert_eq!(wheel.mapping(), None);
+        assert_eq!(wheel.feral_entry(), None);
         let mut few = eightbitdo();
         few.keys = "3000000000000 0 0 0 0".into(); // no gamepad buttons
-        assert_eq!(few.mapping(), None);
+        assert_eq!(few.feral_entry(), None);
         let mut nameless = eightbitdo();
         nameless.version = 0;
-        assert_eq!(nameless.mapping(), None);
+        assert_eq!(nameless.feral_entry(), None);
+    }
+
+    /// A trimmed inputdevices.json in Feral's shape.
+    const FERAL_LIST: &str = r#"[
+	{
+		"_Comment": "Originally based on mapping database available at https://github.com/gabomdq/SDL_GameControllerDB"
+	},
+    {
+        "Name": "X360 Controller",
+        "VendorID": "0x045e",
+        "ProductIDs": [
+            "0x028e",
+			"*"
+        ],
+        "Category": "Gamepad",
+        "Type": "Xbox360Gamepad",
+        "SDLMapping": "a:b0,b:b1"
+    }
+]
+"#;
+
+    #[test]
+    fn a_pad_feral_does_not_list_is_added_as_an_xbox_360_gamepad() {
+        let out = input_devices(FERAL_LIST, &[eightbitdo(), eightbitdo()]).unwrap();
+        assert!(out.starts_with(FERAL_LIST.trim_end().trim_end_matches(']').trim_end()));
+        let list: Vec<serde_json::Value> = serde_json::from_str(&out).unwrap();
+        assert_eq!(
+            list.len(),
+            3,
+            "one new entry, the same pad twice is added once"
+        );
+        let added = &list[2];
+        assert_eq!(added["Name"], "8BitDo Ultimate 2 Wireless Controller");
+        assert_eq!(added["VendorID"], "0x2dc8");
+        assert_eq!(added["ProductIDs"][0], "0x310b");
+        assert_eq!(added["Category"], "Gamepad");
+        assert_eq!(added["Type"], "Xbox360Gamepad");
+        assert_eq!(sorted(added["SDLMapping"].as_str().unwrap()), sorted(X360));
+        // Built again from the game's own file: the same text.
+        assert_eq!(input_devices(FERAL_LIST, &[eightbitdo()]).unwrap(), out);
     }
 
     #[test]
-    fn commas_in_a_name_cannot_break_the_line() {
+    fn a_pad_feral_already_lists_is_left_to_feral() {
+        let mut xbox = eightbitdo();
+        xbox.vendor = 0x045e;
+        xbox.product = 0x02ea; // matched by the vendor's "*"
+        assert_eq!(input_devices(FERAL_LIST, &[xbox]).unwrap(), FERAL_LIST);
+        assert_eq!(input_devices(FERAL_LIST, &[]).unwrap(), FERAL_LIST);
+    }
+
+    #[test]
+    fn a_broken_list_is_refused_not_guessed() {
+        assert!(input_devices("not json", &[eightbitdo()]).is_err());
+        assert!(input_devices("{\"a\": 1}", &[eightbitdo()]).is_err());
+    }
+
+    #[test]
+    fn commas_in_a_name_are_dropped() {
         let mut pad = eightbitdo();
         pad.name = "Pad, Model X\n".into();
-        assert!(pad.mapping().unwrap().contains(",Pad Model X,a:b0"));
-    }
-
-    #[test]
-    fn the_players_own_mapping_comes_last_and_wins() {
-        let ours = mappings(&[eightbitdo(), eightbitdo()]);
-        assert_eq!(ours.len(), 1, "one line per GUID");
-        let config = config(&ours, Some("030000005e0400008e02000014010000,Mine,a:b1,")).unwrap();
-        let lines: Vec<&str> = config.lines().collect();
-        assert_eq!(lines.len(), 2);
-        assert!(lines[1].starts_with("030000005e04"));
-        assert_eq!(super::config(&[], Some("  ")), None);
+        assert_eq!(pad.feral_entry().unwrap()["Name"], "Pad Model X");
     }
 
     #[test]
@@ -294,13 +373,13 @@ mod tests {
     }
 }
 
-/// This machine's pads (manual check): `cargo test -p dirtrally-launcher
-/// --lib this_machines_pads -- --ignored --nocapture`.
+/// This machine's pads as Feral entries (manual check):
+/// `cargo test -p dirtrally-launcher --lib this_machines_pads -- --ignored --nocapture`.
 #[cfg(test)]
 #[test]
 #[ignore]
 fn this_machines_pads() {
-    for line in mappings(&pads(Path::new("/sys/class/input"))) {
-        println!("{line}");
+    for pad in pads(Path::new("/sys/class/input")) {
+        println!("{}: {:?}", pad.name, pad.feral_entry());
     }
 }

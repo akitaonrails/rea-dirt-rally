@@ -59,10 +59,6 @@ pub struct Host {
     pub ld_library_path: Option<OsString>,
     pub ld_preload: Option<OsString>,
     pub cert_file: Option<PathBuf>,
-    /// The connected pads' SDL 2.0.5 mappings ([`crate::pads`]).
-    pub pad_mappings: Vec<String>,
-    /// The caller's own `SDL_GAMECONTROLLERCONFIG`.
-    pub sdl_config: Option<String>,
 }
 
 /// The well-known certificate files, as the game's script tries them.
@@ -135,9 +131,6 @@ pub fn launch(runtime: &Path, package: &Package, host: &Host) -> Result<Launch, 
     if let Some(cert) = &host.cert_file {
         set.push(("SSL_CERT_FILE".to_owned(), cert.clone().into()));
     }
-    if let Some(config) = crate::pads::config(&host.pad_mappings, host.sdl_config.as_deref()) {
-        set.push(("SDL_GAMECONTROLLERCONFIG".to_owned(), config.into()));
-    }
     Ok(Launch {
         program: bin.join("DirtRally"),
         cwd: bin,
@@ -159,8 +152,6 @@ pub fn host_from_env() -> Host {
             .iter()
             .map(PathBuf::from)
             .find(|path| path.is_file()),
-        pad_mappings: crate::pads::mappings(&crate::pads::pads(Path::new("/sys/class/input"))),
-        sdl_config: std::env::var("SDL_GAMECONTROLLERCONFIG").ok(),
     }
 }
 
@@ -249,19 +240,11 @@ mod tests {
     }
 
     #[test]
-    fn connected_pads_reach_the_game_and_the_players_mapping_wins() {
-        let none = launch(Path::new("/rt"), &package(), &Host::default()).unwrap();
-        assert!(value(&none, "SDL_GAMECONTROLLERCONFIG").is_none());
-        let host = Host {
-            pad_mappings: vec!["03000000c82d00000b31000014010000,8BitDo,a:b0,".into()],
-            sdl_config: Some("03000000c82d00000b31000014010000,Mine,a:b1,".into()),
-            ..Host::default()
-        };
-        let launch = launch(Path::new("/rt"), &package(), &host).unwrap();
-        assert_eq!(
-            value(&launch, "SDL_GAMECONTROLLERCONFIG").unwrap(),
-            "03000000c82d00000b31000014010000,8BitDo,a:b0,\n03000000c82d00000b31000014010000,Mine,a:b1,"
-        );
+    fn the_launcher_never_sets_sdls_controller_mappings() {
+        // With SDL_GAMECONTROLLERCONFIG set, Feral hides a pad it does not
+        // list (owner's test); pads go into inputdevices.json instead.
+        let launch = launch(Path::new("/rt"), &package(), &Host::default()).unwrap();
+        assert!(value(&launch, "SDL_GAMECONTROLLERCONFIG").is_none());
     }
 
     #[test]

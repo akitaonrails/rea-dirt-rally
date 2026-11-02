@@ -134,3 +134,13 @@ in place (read-only).
   xpad) is unknown to SDL 2.0.5, so the game sees a plain joystick, not a
   gamepad. Fix: SDL_GAMECONTROLLERCONFIG from sysfs (`pads.rs`). Pending:
   the owner's check that the game now uses its gamepad preset on start.
+- Owner's test of `SDL_GAMECONTROLLERCONFIG`: worse, the pad vanished from
+  the game's Controls (keyboard only). Feral keeps its own controller list
+  (`share/inputdevices.json`: vendor/product, `Category`, `Type`
+  `Xbox360Gamepad`, `SDLMapping`); a pad SDL calls a game controller but
+  Feral does not list is dropped. The variable is gone; the launcher now
+  adds connected standard-layout pads to that list in the private copy,
+  rebuilt from the game's own file at each start (`pads::input_devices`).
+  Headless: the game loads with the edited list (74 entries, the 8BitDo
+  added). Pending: the owner's check in the Controls menu and across a
+  restart.

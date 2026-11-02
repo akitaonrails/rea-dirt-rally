@@ -43,6 +43,5 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
   Without gamescope, a multi-monitor desktop can put the game on the wrong
   screen (SDL 2.0.5 uses display 0).
 - Gamepads: every connected pad with the standard Linux layout (xpad and
-  others) gets an SDL 2.0.5 mapping in `SDL_GAMECONTROLLERCONFIG`, so the
-  game's 2016 SDL treats newer pads as game controllers; a player's own
-  mapping still wins.
+  others) that Feral's own controller list lacks is added to that list in
+  the private copy, as an Xbox 360-style gamepad.

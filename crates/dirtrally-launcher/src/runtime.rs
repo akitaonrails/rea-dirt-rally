@@ -42,10 +42,15 @@ impl Policy for GamePolicy {
         false
     }
 
-    fn owned(&self, _rel: &str, _source: Stamp) -> bool {
-        false
+    /// Feral's controller list: the launcher writes it at every start from
+    /// the game's own copy and the connected pads (`start::write_input_devices`).
+    fn owned(&self, rel: &str, _source: Stamp) -> bool {
+        rel.eq_ignore_ascii_case(INPUT_DEVICES)
     }
 }
+
+/// Feral's controller list, relative to the game folder.
+pub const INPUT_DEVICES: &str = "share/inputdevices.json";
 
 /// Brings the game folder into `runtime`, which may never overlap it.
 pub fn prepare(game: &Path, runtime: &Path) -> Result<SyncReport, String> {
@@ -140,5 +145,19 @@ mod tests {
         // A runtime inside the game folder is refused.
         assert!(prepare(&game, &game.join("runtime")).is_err());
         fs::remove_dir_all(&root).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod owned_tests {
+    use super::*;
+
+    #[test]
+    fn only_feral_s_controller_list_is_the_launcher_s() {
+        let stamp = Stamp { size: 1, mtime: 1 };
+        assert!(GamePolicy.owned("share/inputdevices.json", stamp));
+        assert!(GamePolicy.owned("Share/InputDevices.json", stamp));
+        assert!(!GamePolicy.owned("share/data/game.bin", stamp));
+        assert!(!GamePolicy.owned("bin/DirtRally", stamp));
     }
 }

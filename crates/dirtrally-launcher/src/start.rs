@@ -18,8 +18,10 @@ use std::path::{Path, PathBuf};
 use rea_launcher::cfg::Resolution;
 use rea_launcher::fsx;
 
+use rea_launcher::paths;
+
 use crate::plan::{self, Package};
-use crate::prefs;
+use crate::{pads, prefs, runtime};
 
 /// The launcher's folder name under the XDG folders.
 pub const APP_DIR: &str = "dirtrally-launcher";
@@ -152,6 +154,45 @@ pub fn write_prefs(home: &Path, config: &Path, start: prefs::Start) -> Result<Pa
     Ok(path)
 }
 
+/// Writes Feral's controller list into `runtime`: the game's own
+/// `share/inputdevices.json` from `game` with an entry for each connected
+/// pad it does not list ([`pads::input_devices`]). Rebuilt at every start,
+/// so a pad that is gone is gone from the list too. Returns the names of
+/// the pads the list now holds that the game's own list did not.
+pub fn write_input_devices(
+    game: &Path,
+    runtime: &Path,
+    connected: &[pads::Pad],
+) -> Result<Vec<String>, String> {
+    let source = paths::find_ignoring_case(game, runtime::INPUT_DEVICES)
+        .filter(|path| path.is_file())
+        .ok_or_else(|| {
+            format!(
+                "There is no {} in {}.",
+                runtime::INPUT_DEVICES,
+                game.display()
+            )
+        })?;
+    let original = std::fs::read_to_string(&source)
+        .map_err(|error| format!("Cannot read {}: {error}", source.display()))?;
+    let text = pads::input_devices(&original, connected)?;
+    let target = paths::native(runtime, runtime::INPUT_DEVICES);
+    if std::fs::read_to_string(&target).ok().as_deref() != Some(text.as_str()) {
+        if let Some(dir) = target.parent() {
+            std::fs::create_dir_all(dir)
+                .map_err(|error| format!("Cannot create {}: {error}", dir.display()))?;
+        }
+        fsx::write_atomic(&target, &text)
+            .map_err(|error| format!("Cannot save {}: {error}", target.display()))?;
+    }
+    let before: Vec<serde_json::Value> = serde_json::from_str(&original).unwrap_or_default();
+    let after: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap_or_default();
+    Ok(after[before.len().min(after.len())..]
+        .iter()
+        .filter_map(|entry| entry["Name"].as_str().map(str::to_owned))
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -241,6 +282,44 @@ mod tests {
         assert_eq!(screen_from_xrandr(out), Some((2560, 1440)));
         assert_eq!(screen_from_xrandr("Can't open display"), None);
         assert_eq!(screen_from_xrandr("Screen 0: current 0 x 0,"), None);
+    }
+
+    #[test]
+    fn a_new_pad_joins_feral_s_list_in_the_copy_and_leaves_with_the_pad() {
+        let root = std::env::temp_dir().join(format!("dirtrally-pads-copy-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let (game, rt) = (root.join("Jogos d'Ação"), root.join("runtime"));
+        fs::create_dir_all(game.join("share")).unwrap();
+        let original = "[\n    {\n        \"Name\": \"X360 Controller\",\n        \"VendorID\": \"0x045e\",\n        \"ProductIDs\": [\"0x028e\"]\n    }\n]\n";
+        fs::write(game.join("share/inputdevices.json"), original).unwrap();
+        let pad = pads::Pad {
+            name: "8BitDo Ultimate 2 Wireless Controller".into(),
+            bus: 3,
+            vendor: 0x2dc8,
+            product: 0x310b,
+            version: 0x0114,
+            keys: "7cdb000000000000 0 0 0 0".into(),
+            abs: "3003f".into(),
+        };
+        let added = write_input_devices(&game, &rt, std::slice::from_ref(&pad)).unwrap();
+        assert_eq!(added, ["8BitDo Ultimate 2 Wireless Controller"]);
+        let copy = fs::read_to_string(rt.join("share/inputdevices.json")).unwrap();
+        assert!(
+            copy.contains("\"0x310b\"") && copy.contains("Xbox360Gamepad"),
+            "{copy}"
+        );
+        // The player's folder keeps the game's own list.
+        assert_eq!(
+            fs::read_to_string(game.join("share/inputdevices.json")).unwrap(),
+            original
+        );
+        // Next start without the pad: the game's own list again.
+        assert!(write_input_devices(&game, &rt, &[]).unwrap().is_empty());
+        assert_eq!(
+            fs::read_to_string(rt.join("share/inputdevices.json")).unwrap(),
+            original
+        );
+        fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

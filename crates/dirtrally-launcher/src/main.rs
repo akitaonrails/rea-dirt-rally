@@ -24,7 +24,7 @@ mod linux {
     use std::process::Command;
 
     use dirtrally_launcher::cli::{self, Invocation, Mode};
-    use dirtrally_launcher::{config, plan, runtime, start};
+    use dirtrally_launcher::{config, pads, plan, runtime, start};
     use rea_launcher::log::Log;
     use rea_launcher::{cfg, fsx};
 
@@ -129,6 +129,18 @@ mod linux {
         ));
         let prefs = start::write_prefs(&home(), &places.config, how)?;
         log.line(&format!("preferences: {}", prefs.display()));
+        let connected = pads::pads(std::path::Path::new("/sys/class/input"));
+        for pad in &connected {
+            log.line(&format!(
+                "pad: {} ({:04x}:{:04x}), standard layout: {}",
+                pad.name,
+                pad.vendor,
+                pad.product,
+                pad.layout().is_some()
+            ));
+        }
+        let added = start::write_input_devices(&found.root, &runtime_dir, &connected)?;
+        log.line(&format!("controller list: added {added:?}"));
 
         if first_run || saved.game.as_ref() != Some(&game) {
             let text = config::set(&text, "game", &game.display().to_string());
