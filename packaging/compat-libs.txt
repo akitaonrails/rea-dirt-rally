@@ -1,0 +1,26 @@
+# The sonames DiRT Rally's Linux port needs that modern systems no longer ship
+# (ldd of bin/DirtRally and its bundled libcurl/libcef). One per line.
+libasn1.so.8
+libcrypto.so.1.0.0
+libdbus-glib-1.so.2
+libffi.so.6
+libgconf-2.so.4
+libgcrypt.so.11
+libgnutls.so.26
+libgssapi.so.3
+libhcrypto.so.4
+libheimbase.so.1
+libheimntlm.so.0
+libhogweed.so.4
+libhx509.so.5
+libidn.so.11
+libkrb5.so.26
+liblber-2.4.so.2
+libldap_r-2.4.so.2
+libnettle.so.6
+libroken.so.18
+librtmp.so.0
+libsasl2.so.2
+libssl.so.1.0.0
+libtasn1.so.3
+libwind.so.0

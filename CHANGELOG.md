@@ -35,3 +35,6 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
   Linux helper in native mode (`linux/dirtrally-play`); settings and log in
   `~/.config/dirtrally-launcher`, the private copy in
   `~/.local/share/dirtrally-launcher/runtime`.
+- Linux package: the launcher, its exec-read library and the legacy
+  libraries from pinned Steam scout packages (`game-libs/`), kept off the
+  launcher's own library path.

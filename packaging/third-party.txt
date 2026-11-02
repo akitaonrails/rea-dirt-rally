@@ -7,3 +7,29 @@
 # sdk/packaging/pins.sh, never committed. Record each one's licence and
 # source in THIRD_PARTY.md; mark it `mirror` only when its licence allows
 # republishing.
+
+# Legacy libraries for DiRT Rally's 2017 Linux port, from the Steam scout runtime
+# (Ubuntu 12.04 based). Unpacked into game-libs/compat by packaging/package.sh;
+# licences and sources: THIRD_PARTY.md. name url sha256
+compat-libssl1.0.0 https://repo.steampowered.com/steamrt/pool/main/o/openssl/libssl1.0.0_1.0.1-4ubuntu5.45+steamrt1.2+srt1_amd64.deb d5e5d8caee471a0c62363626dec2b72aaae15db756aa80af1b0151ff31c0b98f
+compat-libidn11 https://repo.steampowered.com/steamrt/pool/main/libi/libidn/libidn11_1.32-3ubuntu1.2+steamrt1.1+srt2_amd64.deb 18011ae05a4dbe00d4deafb63dabdf0416c1fa2c202d3c0e6ce840d96001f4f6
+compat-librtmp0 https://repo.steampowered.com/steamrt/pool/main/r/rtmpdump/librtmp0_2.4~20110711.gitc28f1bab-1+steamrt1.2ubuntu0.1+srt1_amd64.deb 61f868fd47840a1bda57af26198c7b84d6622937214f9f4d73346cd3880ebc30
+compat-libldap-2.4-2 https://repo.steampowered.com/steamrt/pool/main/o/openldap/libldap-2.4-2_2.4.28-1.1ubuntu4.12+steamrt1.1+srt1_amd64.deb 3eac810b023d5f6a0b0c57aa315556a5a05fe9971538d974f8cd0cb6a179d06e
+compat-libgconf-2-4 https://repo.steampowered.com/steamrt/pool/main/g/gconf/libgconf-2-4_3.2.5-0ubuntu2+steamrt1.1+srt2_amd64.deb 086f7ba27b92e13149970230a8ce6e30b41c9cd3585ad9dc075114e37d38ef6b
+compat-libgnutls26 https://repo.steampowered.com/steamrt/pool/main/g/gnutls26/libgnutls26_2.12.14-5ubuntu3.14+srt2_amd64.deb 6dfc2c19deeaa0272a291d7b3d4fee5ee57b36806b578f1b43f82ab9708c5fad
+compat-libgcrypt11 https://repo.steampowered.com/steamrt/pool/main/libg/libgcrypt11/libgcrypt11_1.5.0-3ubuntu0.9+srt1_amd64.deb 745afc7316fe45efcc28625419c6cdcf39aa1a7fa8e2c4766200d6384a18e194
+compat-libasn1-8-heimdal https://repo.steampowered.com/steamrt/pool/main/h/heimdal/libasn1-8-heimdal_1.6~git20120311.dfsg.1-2+steamrt1.1ubuntu0.2+srt1_amd64.deb c3e23a110c91ec8cabd0b86f64376a30bd51b8860b1357f500b9a54e6f18ea78
+compat-libgssapi3-heimdal https://repo.steampowered.com/steamrt/pool/main/h/heimdal/libgssapi3-heimdal_1.6~git20120311.dfsg.1-2+steamrt1.1ubuntu0.2+srt1_amd64.deb 908eb76688557b35d067c6d5f50c3ad2d00536f7a8644ede42ff0b2ee105c4d6
+compat-libhcrypto4-heimdal https://repo.steampowered.com/steamrt/pool/main/h/heimdal/libhcrypto4-heimdal_1.6~git20120311.dfsg.1-2+steamrt1.1ubuntu0.2+srt1_amd64.deb 8124717b48a811ea7b4c9d02b964ee443e1d8be4dd018f36710e9af2e7044178
+compat-libheimbase1-heimdal https://repo.steampowered.com/steamrt/pool/main/h/heimdal/libheimbase1-heimdal_1.6~git20120311.dfsg.1-2+steamrt1.1ubuntu0.2+srt1_amd64.deb a8fff771020cf5173e87f1c69a127cd1ed716cea047adb613ff7f7b3dd521492
+compat-libheimntlm0-heimdal https://repo.steampowered.com/steamrt/pool/main/h/heimdal/libheimntlm0-heimdal_1.6~git20120311.dfsg.1-2+steamrt1.1ubuntu0.2+srt1_amd64.deb 675369df6da0e2a76e5e422dfef38807c72d673380db902b8089662d5d21ea67
+compat-libhx509-5-heimdal https://repo.steampowered.com/steamrt/pool/main/h/heimdal/libhx509-5-heimdal_1.6~git20120311.dfsg.1-2+steamrt1.1ubuntu0.2+srt1_amd64.deb 09c03b1813a829d1ba854f516bc04d1d0e26f45f3bb0321bb8a4bce654528a8c
+compat-libkrb5-26-heimdal https://repo.steampowered.com/steamrt/pool/main/h/heimdal/libkrb5-26-heimdal_1.6~git20120311.dfsg.1-2+steamrt1.1ubuntu0.2+srt1_amd64.deb 9ea13d2f41651f972f0da6f0177b34d40d0a5603bfa96c9becfb9bacfe5019d5
+compat-libroken18-heimdal https://repo.steampowered.com/steamrt/pool/main/h/heimdal/libroken18-heimdal_1.6~git20120311.dfsg.1-2+steamrt1.1ubuntu0.2+srt1_amd64.deb 1284ce101e8bf1465ca41e2ac1abd6ac2c82ad25a187b208be60fe91ced31c9b
+compat-libwind0-heimdal https://repo.steampowered.com/steamrt/pool/main/h/heimdal/libwind0-heimdal_1.6~git20120311.dfsg.1-2+steamrt1.1ubuntu0.2+srt1_amd64.deb 2a8f0e11524d0380985c604300b13894aba11a10be36d405f25f2676aa7bd97d
+compat-libhogweed4 https://repo.steampowered.com/steamrt/pool/main/n/nettle/libhogweed4_3.2-1ubuntu0.16.04.1+srt2_amd64.deb a8411a24f3314b11a25f249bb5390a31e7485d81e5941b8823ad0e67af033c32
+compat-libnettle6 https://repo.steampowered.com/steamrt/pool/main/n/nettle/libnettle6_3.2-1ubuntu0.16.04.1+srt2_amd64.deb 18f8ac5721849072980c7f8cdffdf2eac3c8621f3aff02bc32fe1945e2abf0ec
+compat-libdbus-glib-1-2 https://repo.steampowered.com/steamrt/pool/main/d/dbus-glib/libdbus-glib-1-2_0.98-1ubuntu1.1+steamrt1.1+srt1_amd64.deb 9b14f65229a1254f78511828556f3eb57e3c0dbf19cd916bc21cac14fd6d4ce3
+compat-libffi6 https://repo.steampowered.com/steamrt/pool/main/libf/libffi/libffi6_3.0.11~rc1-5+steamrt1.1ubuntu0.1+srt1_amd64.deb 0cf4aa0f7e711580542cc95b1388ae61f75a121d5dfabae4801302f5145db47a
+compat-libsasl2-2 https://repo.steampowered.com/steamrt/pool/main/c/cyrus-sasl2/libsasl2-2_2.1.25.dfsg1-3ubuntu0.2+srt1_amd64.deb e782a41cca6cbf6b3707a49edc1ccb3be56174c6d1b3d20d81047833e33f2229
+compat-libtasn1-3 https://repo.steampowered.com/steamrt/pool/main/libt/libtasn1-3/libtasn1-3_2.10-1ubuntu1.6+srt1_amd64.deb 84b08c0097345d1fc3fb2f42a8ed66db0d2864997b80c601b8214ca81d50ff14

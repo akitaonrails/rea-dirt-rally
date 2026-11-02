@@ -92,3 +92,17 @@ in place (read-only).
   the game writes its Ultra preset itself (3072 shadows, textures 3, 4×MSAA).
   Not wired to an option yet.
 - Pending: the launcher binary doing this end to end (the next run).
+
+## 2026-11-02: the launcher end to end (headless, isolated HOME)
+
+- First run, source on the NAS, runtime on local disk: the launcher copied
+  11,043 files (40 GB, nothing linkable across disks), wrote the
+  preferences, started the game from the copy; intro video and attract
+  loop played. (Old binary: Feral's window still shown, PLAY clicked.)
+- Packaged launcher (`dist/…-linux-x86_64`, game-libs from the pinned scout
+  packages, no host libraries): second start brought 0 files; `look =
+  recommended` read the screen as 2560×1440 (xrandr inside gamescope),
+  skipped Feral's window, and the game loaded straight to its 2560×1440
+  loading screen with no input. SIGTERM: the game exits with status 0.
+- Not yet: audio through PipeWire, gamepad, a full race from the menus,
+  Steam Deck, the settings window (Linux), the AppImage.

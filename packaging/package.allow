@@ -1,7 +1,7 @@
-# Everything the zip folder (dist/DiRTRallyLauncher-<version>/) may hold; anything
-# else fails sdk/packaging/smoke-package.sh in CI. Never game files.
+# Everything the Linux package folder may hold; anything else fails
+# sdk/packaging/smoke-package.sh in CI. Never game files.
 # Flags: x (executable), empty (may be empty), optional (may be missing).
-DiRTRallyLauncher.exe
+DiRTRallyLauncher x
 README.md
 THIRD_PARTY.md
 CHANGELOG.md
@@ -11,3 +11,6 @@ linux/dirtrally-play x
 linux/rea-play.sh
 linux/README.md
 licenses/Barlow-OFL.txt
+licenses/compat/*.copyright
+game-libs/libdirtrally_exec_read.so
+game-libs/compat/*.so.*
