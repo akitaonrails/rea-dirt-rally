@@ -46,3 +46,22 @@ in place (read-only).
   bink2w32 (shipped), steam_api, winhttp, gdiplus, …
 - gamescope 3.x segfaults on teardown after the session ends (both runs);
   harmless for the test, worth watching in the helper.
+
+## 2026-11-02: native port plays a stage (from a private copy)
+
+- The game writes into its own folder: CEF creates an empty directory
+  `bin/libpdf.so` at start. So it must run from a private runtime copy, never
+  in place. (Two early test runs in place created that empty directory in
+  the owner's folder; it was removed with `rmdir`, nothing else changed.)
+- Scratch runtime: `bin/`, `lib/`, `config/` copied; `share/` pointed at
+  the source read-only (test only).
+- Feral's pre-game launcher: a click on PLAY (XTest, test tool) starts the
+  game. `SDL_AUDIODRIVER=dummy` trips an SDL assertion dialog
+  (`open_audio_device … device->hidden != NULL`); `SDL_AUDIODRIVER=disk`
+  with `SDL_DISKAUDIOFILE=/dev/null` works headless.
+- Title screen ("v1.22", PRESS START OR ENTER) at 1920×1080, attract video.
+- `-benchmark`: loads and drives a full Wales stage (Hafren) to the finish
+  on all 32 threads, no crash — the many-core crash does not affect this
+  native build. Default quality preset after first run: `ultralow`.
+- Not yet: real audio (PipeWire), gamepad, quality/resolution settings,
+  clean quit, saves.
