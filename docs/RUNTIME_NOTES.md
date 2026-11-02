@@ -106,3 +106,16 @@ in place (read-only).
   loading screen with no input. SIGTERM: the game exits with status 0.
 - Not yet: audio through PipeWire, gamepad, a full race from the menus,
   Steam Deck, the settings window (Linux), the AppImage.
+
+## 2026-11-02: 4K
+
+- No resolution cap in the game data: the sizes in
+  `feral_hardware_settings_options.xml` are only first-boot defaults of
+  each preset. Feral's `FeralUIResolutionWarningThreshold` (3686400 =
+  2560×1440) only drives a warning in the pre-game window, which the
+  launcher skips.
+- gamescope 3840×2160, `look = recommended`: the launcher set 3840×2160, the
+  game wrote `resolution width="3840" height="2160"` itself, and the
+  `-benchmark` stage rendered real 3D frames at 3840×2160.
+- Owner decision: graphics quality stays the game's (its own menu and
+  first-boot preset); the launcher sets only the size. No 4K patch needed.
