@@ -124,7 +124,7 @@ fn check_needs_a_game_folder_with_a_known_edition() {
     let missing = cli::check(&game, cwd).unwrap_err();
     assert!(missing.contains("There is no"), "{missing}");
 
-    std::fs::write(dir.join(edition::GAME_EXE), b"some other build").unwrap();
+    std::fs::write(dir.join("drt.exe"), b"some other build").unwrap();
     let unknown = cli::check(&game, cwd).unwrap_err();
     let digest = identify::hex(&identify::sha256(b"some other build"));
     assert!(unknown.contains(&digest), "{unknown}");
@@ -176,7 +176,7 @@ mod program {
     #[test]
     fn check_refuses_an_unknown_edition_with_its_digest() {
         let dir = scratch("unknown-game");
-        std::fs::write(dir.join(edition::GAME_EXE), b"some other build").unwrap();
+        std::fs::write(dir.join("drt.exe"), b"some other build").unwrap();
         let game = dir.display().to_string();
         let (output, log) = run("unknown", &["--check", "--game", &game]);
         assert_eq!(output.status.code(), Some(cli::REFUSED));

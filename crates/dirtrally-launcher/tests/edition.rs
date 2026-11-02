@@ -20,14 +20,17 @@ fn a_missing_folder_or_exe_is_named() {
     let none = edition::find(&dir.join("nowhere")).unwrap_err();
     assert!(none.contains("There is no folder"), "{none}");
     let no_exe = edition::find(&dir).unwrap_err();
-    assert!(no_exe.contains(edition::GAME_EXE), "{no_exe}");
+    assert!(
+        no_exe.contains(edition::GAME_EXE) && no_exe.contains("drt.exe"),
+        "{no_exe}"
+    );
 }
 
 #[test]
 fn an_unknown_build_in_any_letter_case_is_refused_with_its_digest() {
     let dir = scratch("unknown");
     let bytes = b"MZ an unknown build";
-    std::fs::write(dir.join(edition::GAME_EXE.to_uppercase()), bytes).unwrap();
+    std::fs::write(dir.join("DRT.EXE"), bytes).unwrap();
     let refused = edition::find(&dir).unwrap_err();
     assert!(
         refused.contains(&identify::hex(&identify::sha256(bytes))),

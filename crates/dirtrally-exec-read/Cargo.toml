@@ -1,0 +1,23 @@
+[package]
+name = "dirtrally-exec-read"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "LD_PRELOAD library for DiRT Rally's Linux port: executable memory is also readable"
+publish = false
+
+# cdylib: the library the Linux helper preloads into the game.
+# rlib: so the tests can use the same code.
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+# Test probe: maps execute-only memory and reads it back (tests/probe.rs).
+name = "exec-read-probe"
+path = "src/probe.rs"
+test = false
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"

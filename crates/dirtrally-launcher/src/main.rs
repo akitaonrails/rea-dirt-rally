@@ -161,7 +161,7 @@ mod app {
             found.exe.display()
         ));
         if invocation.mode == Mode::Check {
-            out.say(&cli::check_report(&game, &found), Icon::Info);
+            out.say(&cli::check_report(&found), Icon::Info);
             return Ok(cli::OK);
         }
 

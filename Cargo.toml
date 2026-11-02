@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/dirtrally-launcher"]
+members = ["crates/dirtrally-launcher", "crates/dirtrally-exec-read"]
 resolver = "3"
 
 [workspace.package]

@@ -107,7 +107,7 @@ pub fn game_folder(settings: &Settings, cwd: &Path) -> Result<PathBuf, String> {
     let game = settings.game.as_deref().ok_or_else(|| {
         format!(
             "No game folder yet. Choose it in the settings window, or run:\n\n\
-             DiRTRallyLauncher.exe --game <the folder with {}>",
+             DiRTRallyLauncher --game <the folder with {}>",
             edition::GAME_EXE
         )
     })?;
@@ -117,16 +117,16 @@ pub fn game_folder(settings: &Settings, cwd: &Path) -> Result<PathBuf, String> {
 /// `--check`: the game folder and its edition, or why it cannot be played.
 pub fn check(settings: &Settings, cwd: &Path) -> Result<(PathBuf, Found), String> {
     let game = game_folder(settings, cwd)?;
-    let found = edition::find(&game)?;
+    let found = edition::find_playable(&game)?;
     Ok((game, found))
 }
 
 /// The `--check` report for a playable folder.
-pub fn check_report(game: &Path, found: &Found) -> String {
+pub fn check_report(found: &Found) -> String {
     format!(
         "Ready to play: {} ({}) in {}",
-        edition::GAME_EXE,
+        found.exe.display(),
         found.edition.name,
-        game.display()
+        found.root.display()
     )
 }

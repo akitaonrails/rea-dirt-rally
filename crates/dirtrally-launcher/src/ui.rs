@@ -493,7 +493,7 @@ mod tests {
 
         let dir = std::env::temp_dir().join(format!("dirtrally-ui-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join(edition::GAME_EXE), b"not the game").unwrap();
+        std::fs::write(dir.join("drt.exe"), b"not the game").unwrap();
         *ui.state_mut().form.value_mut("game") = dir.display().to_string();
         ui.run();
         let digest = rea_launcher::identify::hex(&rea_launcher::identify::sha256(b"not the game"));
