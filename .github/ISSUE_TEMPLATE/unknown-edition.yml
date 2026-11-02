@@ -1,13 +1,14 @@
 name: Unknown edition
-description: "DiRTRallyLauncher.exe said your drt.exe is a build it does not know."
+description: "DiRTRallyLauncher said your bin/DirtRally (or drt.exe) is a build it does not know."
 title: "Unknown edition: "
 labels: ["edition"]
 body:
   - type: markdown
     attributes:
       value: |
-        The launcher only changes builds it has identified by SHA-256, so it refused yours and
-        left it untouched. Tell us about your copy and we will add it. Never attach game files.
+        The launcher only plays builds it has identified by SHA-256, so it refused yours and
+        left it untouched. Tell us about your copy and we will add it. Never attach game files,
+        and don't post links to them.
   - type: input
     id: sha256
     attributes:
@@ -20,11 +21,9 @@ body:
     attributes:
       label: Where is your copy of the game from?
       options:
-        - Retail disc
-        - GOG
-        - Steam
-        - Another store
-        - Patched by hand (official or community patch)
+        - Linux version (Feral Interactive)
+        - Windows version
+        - macOS version
         - Not sure
     validations:
       required: true
@@ -32,7 +31,7 @@ body:
     id: details
     attributes:
       label: Version, language and patches
-      description: e.g. "v1.1, English, official 1.1 patch". The file's size in bytes helps too.
+      description: e.g. "Linux 1.0, build 31946" (share/FeralInfo.json has the build). The file's size in bytes helps too.
   - type: input
     id: version
     attributes:

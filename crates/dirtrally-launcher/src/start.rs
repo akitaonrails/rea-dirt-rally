@@ -221,7 +221,7 @@ pub fn write_input_devices(
         .collect())
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))] // Linux paths and XDG folders
 mod tests {
     use super::*;
     use std::fs;

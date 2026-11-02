@@ -67,6 +67,18 @@ REA_FULLSCREEN_SIZE=screen
 REA_SCREEN=${DIRTRALLY_SCREEN:-}
 REA_FLAG_SWITCHES="--no-window --settings --linux --check --help"
 
+rea_hook_command() {
+  case "${1:-}" in
+    '' | --play | play | start | status | stop | --settings | --help | -h) return 127 ;;   # the helper's own
+    --check)
+      # Checks the game folder; nothing starts, so no gamescope or session.
+      rea_require_exe || exit 1
+      # shellcheck disable=SC2086 # REA_RUN is split into words on purpose
+      exec $REA_RUN "$REA_EXE" "$@" ;;
+    *) return 127 ;;
+  esac
+}
+
 rea_init || exit 1
 # Tests load the configuration and hooks without running anything.
 [ "$_fonly" = 1 ] && return 0

@@ -1,24 +1,22 @@
 name: Bug report
-description: "DiRTRallyLauncher.exe does not run DiRT Rally as it should."
+description: "DiRTRallyLauncher does not run DiRT Rally as it should."
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for the report. Never attach drt.exe, DLLs, saves, media or any other
+        Thank you for the report. Never attach DirtRally, libraries, saves, media or any other
         game files. Remove usernames and personal paths from settings and logs.
   - type: dropdown
     id: system
     attributes:
       label: Where did you play?
       options:
-        - Windows 11
-        - Windows 10
-        - Steam Deck (Game Mode)
-        - Steam Deck (Desktop Mode)
-        - Linux with Steam / Proton
         - Linux with the AppImage
-        - Linux with Wine and dirtrally-play
+        - Linux with the zip (dirtrally-play)
+        - Linux, gamescope in a container (DIRTRALLY_RUN)
+        - Steam Deck (Desktop Mode)
+        - Steam Deck (Game Mode)
         - Other
     validations:
       required: true
@@ -32,10 +30,10 @@ body:
   - type: input
     id: sha256
     attributes:
-      label: SHA-256 of drt.exe
+      label: Edition or SHA-256
       description: |
-        launcher.log names the game's edition, or the SHA-256 of a build it does not know.
-        Windows: `certutil -hashfile drt.exe SHA256`. Linux: `sha256sum drt.exe`.
+        launcher.log names the game's edition (the "game:" line), or the SHA-256 of a build it
+        does not know. By hand: `sha256sum bin/DirtRally` in the game folder.
     validations:
       required: true
   - type: input
@@ -60,8 +58,7 @@ body:
     attributes:
       label: launcher.log
       description: |
-        Windows: %LOCALAPPDATA%\DiRTRallyLauncher\launcher.log. Under Wine or Proton it is inside
-        the prefix (dirtrally-play and the AppImage: ~/.local/share/dirtrally-launcher/prefix).
+        ~/.config/dirtrally-launcher/launcher.log (and play.log beside it).
         Remove personal paths before posting.
       render: text
     validations:

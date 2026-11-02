@@ -47,3 +47,6 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
   the private copy, as an Xbox 360-style gamepad.
   The launcher remembers pads it has seen (`known-pads.json`), so a
   wireless pad asleep at start is still listed.
+- `dirtrally-play --check` checks the game folder without starting anything.
+- CI builds the native Linux zip and AppImage (Ubuntu 22.04) and runs the
+  Windows-target tests under Wine.

@@ -10,9 +10,9 @@ private copy.
 
 This project contains no game files: you need your own copy of the game.
 
-> Played end to end on Linux (Arch, NVIDIA, 4K) with an 8BitDo pad. Not
-> yet: the settings window, the AppImage, the Steam Deck, and the Windows
-> version of the game. Reports welcome in the
+> Played end to end on Linux (Arch, NVIDIA, 4K) with an 8BitDo pad, from
+> the zip and the AppImage. Not yet: the settings window, the Steam Deck,
+> and the Windows version of the game. Reports welcome in the
 > [issues](https://github.com/akitaonrails/rea-dirt-rally/issues).
 
 [![A DiRT Rally stage at 4K through the launcher](https://new-uploads-akitaonrails.s3.us-east-2.amazonaws.com/2026/11/02/dirt-rally-launcher/showcase-poster.jpg)](https://new-uploads-akitaonrails.s3.us-east-2.amazonaws.com/2026/11/02/dirt-rally-launcher/showcase-h264.mp4)
@@ -66,9 +66,14 @@ Download from the [latest release](https://github.com/akitaonrails/rea-dirt-rall
 
 ### Linux
 
-1. Download `DiRTRallyLauncher-…-linux-x86_64.zip` and unpack it
-   anywhere. Keep its folders together.
-2. Start it with `linux/dirtrally-play` (see **First run**).
+Either:
+
+- the AppImage, `DiRTRallyLauncher-…-x86_64.AppImage`: make it executable
+  (`chmod +x`) and run it in place of `linux/dirtrally-play` below; or
+- the zip, `DiRTRallyLauncher-…-linux-x86_64.zip`: unpack it anywhere and
+  keep its folders together.
+
+More Linux details: [linux/README.md](linux/README.md).
 
 ### Steam Deck
 
@@ -172,8 +177,7 @@ checks your game folder without starting anything.
   loading under Wine).
 - No settings window yet; options are set on the command line or in
   `launcher.cfg`.
-- Not yet checked: the AppImage, the Steam Deck, wheels, and whether the
-  game keeps **Controller preset 1** across restarts.
+- Not yet checked: the Steam Deck and wheels.
 - Online features are gone for everyone: RaceNet shut down in 2025, so
   online events, leagues and their achievements no longer work. Offline
   career and single stages work.

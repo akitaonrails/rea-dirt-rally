@@ -15,29 +15,55 @@ permissions:
   contents: read
 
 jobs:
-  # The shared rea-launcher-sdk CI: formatting, host tests, cargo audit and
-  # deny, sdk/ drift, shell syntax and the Linux helper and packaging tests,
-  # Windows-target clippy, the release build, the Windows-target tests under
-  # Wine (headless), packaging and the package allowlist
+  # The shared rea-launcher-sdk CI for the native Linux launcher: formatting,
+  # host tests, cargo audit and deny, sdk/ drift, shell syntax and the Linux
+  # helper and packaging tests, clippy, the release build, the package (zip
+  # and native AppImage) and its allowlist
   # (rea-launcher-sdk docs/playbooks/ci-and-releases.md).
-  ci:
+  linux-packages:
+    name: Linux x86_64
     uses: akitaonrails/rea-launcher-sdk/.github/workflows/launcher-ci.yml@v0.3.3
     with:
-      rust-target: i686-pc-windows-gnu
-      wine-tests: true
-      package-command: packaging/package.sh "dist/DiRTRallyLauncher-$REA_VERSION_NAME"
-      package-dir: dist/DiRTRallyLauncher-*/
+      concurrency-key: linux
+      # The older glibc keeps the launcher running on older distros.
+      runs-on: ubuntu-22.04
+      rust-toolchain: 1.95.0
+      # Native Linux build: DiRT Rally's supported edition is Feral's port.
+      rust-target: ""
+      apt-packages: >-
+        binutils curl file libwayland-dev libxkbcommon-dev pkg-config
+        xz-utils zip unzip
+      package-command: |
+        packaging/package.sh "dist/DiRTRallyLauncher-$REA_VERSION_NAME-linux-x86_64"
+      package-dir: dist/DiRTRallyLauncher-*-linux-x86_64/
       package-allowlist: packaging/package.allow
-      artifact-name: DiRTRallyLauncher-packages
+      artifact-name: DiRTRallyLauncher-linux
       artifact-paths: |
         dist/*.zip
         dist/*.AppImage
 
+  # The Windows-target code (the edition table and option table are shared)
+  # linted and its tests run headless under Wine.
+  windows-tests:
+    name: Windows i686 tests (Wine)
+    uses: akitaonrails/rea-launcher-sdk/.github/workflows/launcher-ci.yml@v0.3.3
+    with:
+      concurrency-key: windows-tests
+      rust-toolchain: 1.95.0
+      rust-target: i686-pc-windows-gnu
+      wine-tests: true
+      wine-test-args: --locked --workspace
+      # The Linux job runs these.
+      audit: false
+      sdk-check: false
+      shell-tests: ""
+
   release:
+    name: Publish tagged release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: ci
-    # All three, even with attest: false (GitHub checks a called workflow's
-    # permissions before any if:).
+    needs: [linux-packages, windows-tests]
+    # Granted even when unused: GitHub checks a called workflow's job
+    # permissions before its `if:`.
     permissions:
       contents: write
       id-token: write
@@ -46,3 +72,4 @@ jobs:
     with:
       package: dirtrally-launcher
       artifact-pattern: DiRTRallyLauncher-*
+      runs-on: ubuntu-22.04

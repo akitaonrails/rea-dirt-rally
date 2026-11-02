@@ -156,3 +156,13 @@ in place (read-only).
 - Wireless pads sleep: the launcher now remembers every standard pad it has
   seen (`~/.config/dirtrally-launcher/known-pads.json`), so a pad off at
   start is still in the copy's list.
+- Owner: after a restart the game started on the gamepad with Controller
+  preset 1, correctly mapped. Gamepad work verified.
+
+## 2026-11-02: the AppImage (native)
+
+- `DiRTRallyLauncher-v0.1.0-x86_64.AppImage --check`: ready to play (its
+  bundled game-libs found through `DIRTRALLY_GAME_LIBS`).
+- Headless gamescope, the AppImage's helper with its own gamescope off:
+  `--play` started the game from the private copy to its title screen;
+  `stop` ended the session; no game or gamescope processes left.

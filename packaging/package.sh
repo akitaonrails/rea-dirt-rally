@@ -106,5 +106,5 @@ if [ -n "$appimage" ]; then
     --payload game-libs --env-path DIRTRALLY_GAME_LIBS=game-libs \
     --doc licenses \
     ${REA_CACHE:+--cache "$REA_CACHE"} \
-    --name "$name" "$pkg" "$dist"
+    --name "${name%-linux-x86_64}" "$pkg" "$dist"
 fi

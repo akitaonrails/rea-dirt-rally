@@ -1,87 +1,80 @@
-<!--
-  For agents: follows sdk/docs/playbooks/readme.md ("linux/README.md").
-  Fill the TODOs, keep the headings, then run this file through the
-  `humanizer` skill (wording only) and delete this comment.
--->
-
 # DiRT Rally on Linux
 
-The launcher is a Windows program (the same one as on Windows); on Linux
-it runs through Wine or Proton. Three ways to play:
+DiRT Rally's supported version is Feral Interactive's Linux port, so the
+launcher runs natively: no Wine or Proton. `dirtrally-play` starts the
+game in its own session, inside gamescope when it is installed, and ends
+the whole session when you stop it.
 
 ## The AppImage
 
 ```sh
 chmod +x DiRTRallyLauncher-*-x86_64.AppImage
-./DiRTRallyLauncher-*-x86_64.AppImage
+./DiRTRallyLauncher-*-x86_64.AppImage --play --game "/path/to/DiRT Rally"
+./DiRTRallyLauncher-*-x86_64.AppImage --play        # later starts
+./DiRTRallyLauncher-*-x86_64.AppImage stop          # from another terminal
 ```
 
-It brings its own Wine, so nothing else needs to be installed. The
-settings window opens: press **Browse…** and pick your game folder (your
-Linux files are on drive `Z:`), choose a look and press **Play**. When
-[gamescope](https://github.com/ValveSoftware/gamescope) is installed the
-game runs in it; otherwise in a plain window. Its Wine prefix is
-`~/.local/share/dirtrally-launcher/prefix`.
+The AppImage holds the launcher, its game libraries and `dirtrally-play`;
+it takes the same commands and options as the zip's helper.
 
-## Steam (Proton)
+## The zip
 
-1. Unzip the release, for example into `~/Games/dirtrally-launcher`.
-2. In Steam: **Games → Add a Non-Steam Game to My Library…** and pick
-   `DiRTRallyLauncher.exe`.
-3. **Properties → Compatibility**: force a Proton version.
-4. Press **Play**, pick your game folder (under drive `Z:`), choose a look
-   and press **Play**.
+```sh
+linux/dirtrally-play --play --game "/path/to/DiRT Rally"
+linux/dirtrally-play --play
+linux/dirtrally-play --check     # checks the game folder, starts nothing
+linux/dirtrally-play status      # running or idle
+linux/dirtrally-play stop
+```
+
+Keep the zip's folders together: the helper finds `DiRTRallyLauncher`
+one folder up, and the launcher finds its `game-libs` folder beside it.
 
 ### Steam Deck
 
-Follow the steps above in Desktop Mode, then play from Game Mode. The
-window recommends the **Steam Deck** look and works with the controls.
+Not checked yet.
 
-<!-- TODO: say whether Game Mode has been verified. -->
+## gamescope in a container
 
-## Your own Wine
-
-`linux/dirtrally-play` runs the launcher and the game in a private Wine prefix,
-inside gamescope when it is installed. It needs `rea-play.sh` beside it
-(the zip and the AppImage ship it) or in `../sdk/` (a repository checkout).
+If gamescope lives in a distrobox (such as the `gaming` box from
+[distrobox-gaming](https://github.com/akitaonrails/distrobox-gaming)), run
+the game through it. Your settings, the private copy and the game's saves
+stay in your own home folder:
 
 ```sh
-linux/dirtrally-play             # the settings window, then the game
-linux/dirtrally-play --play      # the game with the saved settings, no window
-linux/dirtrally-play stop        # end the game
-linux/dirtrally-play status      # running or idle
+DIRTRALLY_RUN="distrobox enter gaming --" linux/dirtrally-play --play
 ```
 
-Launcher options after `--play` apply to that run, for example
-`linux/dirtrally-play --play --look original`. When Wine and gamescope live in
-a [distrobox](https://github.com/containers/distrobox), run it through the
-container:
-
-```sh
-DIRTRALLY_RUN="distrobox enter gaming --" linux/dirtrally-play
-```
+Without gamescope the game opens on the desktop's first display, which can
+be the wrong monitor (or a rotated one) on a multi-monitor desktop.
 
 ## Environment
 
-| Variable | Meaning |
+| Variable | What it does |
 |---|---|
-| `DIRTRALLY_PREFIX` | the Wine prefix (default `~/.local/share/dirtrally-launcher/prefix`) |
-| `DIRTRALLY_LAUNCHER` | `DiRTRallyLauncher.exe` (default: beside the script, or one folder up) |
-| `DIRTRALLY_RUN` | a wrapper for wine and gamescope, e.g. `distrobox enter gaming --` |
-| `DIRTRALLY_GPU` | GPU environment instead of the detected one (empty: none) |
+| `DIRTRALLY_RUN` | A wrapper for gamescope and the game, e.g. `distrobox enter gaming --` (paths with spaces are not supported here) |
+| `DIRTRALLY_LAUNCHER` | Another `DiRTRallyLauncher` program |
+| `DIRTRALLY_GAME_LIBS` | Another `game-libs` folder (development builds) |
+| `DIRTRALLY_SCREEN` | The screen size gamescope and `fullscreen` use, as `WIDTHxHEIGHT` |
+| `DIRTRALLY_GPU` | GPU variables to use instead of the detected ones; empty for none |
 
 ## Where things are
 
 | What | Where |
 |---|---|
-| Settings (`launcher.cfg`) and log (`launcher.log`) | in the prefix, `drive_c/users/<you>/AppData/Local/DiRTRallyLauncher/` |
-| The launcher's copy of the game | `…/AppData/Local/DiRTRallyLauncher/runtime` |
-| Your saves | TODO |
-| `dirtrally-play`'s logs and lock | `~/.config/dirtrally-launcher` |
+| Settings, logs, remembered pads | `~/.config/dirtrally-launcher/` (`launcher.cfg`, `launcher.log`, `play.log`, `known-pads.json`) |
+| Private copy of the game | `~/.local/share/dirtrally-launcher/runtime` |
+| The game's own settings | `~/.local/share/feral-interactive/DiRT Rally/` |
+| Your saves | where your copy of the game keeps them; the copies tested here use `~/.local/share/Steam/ACTiVATED/310560/remote/` |
 
 ## Troubleshooting
 
-<!-- TODO: Linux-only problems found in testing, as bold symptom + fix. -->
-
-- **Anything else:** run `DiRTRallyLauncher.exe --check` through the AppImage or
-  `dirtrally-play`, and look at `launcher.log` (see the table above).
+- **The game opens on the wrong or a rotated monitor**: use gamescope (see
+  **gamescope in a container**), or set `resolution` to your main
+  monitor's size.
+- **"already running"**: a game session is still open; run
+  `dirtrally-play stop`.
+- **The pad is not offered in the game**: turn it on, then choose
+  **Controller preset 1** in **Options → Controls → Controls preset**.
+- **"The launcher's game libraries are missing"**: unpack the whole zip
+  again; `game-libs` must stay beside `DiRTRallyLauncher`.

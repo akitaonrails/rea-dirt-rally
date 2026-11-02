@@ -59,6 +59,14 @@ for layout in repo pkg; do
   check "[$layout] stop" "$(sh "$play" stop)" stopped
 done
 
+echo "# --check and --play options reach the launcher"
+rm -f "$T/ran"
+sh "$T/pkg/linux/dirtrally-play" --check --game "/games/DiRT Rally" > "$T/out" 2>&1
+contains "--check goes to the launcher" "$(cat "$T/ran" 2>/dev/null)" "--check --game /games/DiRT Rally"
+rm -f "$T/ran"
+REA_GAMESCOPE=off sh "$T/pkg/linux/dirtrally-play" --play --game "/games/DiRT Rally" > "$T/out" 2>&1
+contains "--play passes the game folder on" "$(cat "$T/ran" 2>/dev/null)" "--game /games/DiRT Rally"
+
 echo "# DIRTRALLY_RUN: a container wrapper keeps the player's folders"
 cat > "$T/box" <<'BOX'
 #!/bin/sh

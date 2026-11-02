@@ -155,7 +155,7 @@ pub fn host_from_env() -> Host {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))] // Linux paths and variables
 mod tests {
     use super::*;
 
