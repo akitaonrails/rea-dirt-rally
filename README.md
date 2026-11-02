@@ -1,335 +1,266 @@
-<!--
-  README for agents: this file follows sdk/docs/playbooks/readme.md (the
-  canonical outline, tone and rules). Keep its headings and their order.
-  Fill every TODO as the launcher grows, delete each TODO comment once its
-  section is done, and delete an optional section only when it doesn't
-  apply. The top half (down to Uninstall) is for players: plain words, no
-  offsets, hashes, function names or env vars. Never write a release or SDK
-  version in prose or links: downloads go through releases/latest and file
-  names use <version>.
-  When the content is complete, run the player-facing text (this file and
-  linux/README.md) through the `humanizer` skill: wording only, facts,
-  commands, paths, option names and links unchanged. Then delete this
-  comment.
--->
-
 # DiRT Rally Launcher
 
-Play **your own copy** of DiRT Rally on Windows 10/11, the Steam Deck and
-Linux (Proton, Wine or the AppImage). Point the launcher at your installed
-game and press **Play**: everything the game needs is bundled and set up
-for you, with no mods, patchers or settings to fix by hand. Your game
-folder is only read, never changed: the launcher plays from its own
+Plays your own copy of the Linux version of **DiRT Rally** (2015) on a
+modern Linux desktop. The launcher brings the old libraries the 2017 port
+needs and the fix for its crash on new CPUs, so you don't have to hunt for
+libraries or edit config files by hand.
+
+Your game folder is only read, never changed: the launcher plays from a
 private copy.
 
 This project contains no game files: you need your own copy of the game.
 
-> **Work in progress.** This launcher was just started; the sections below
-> are filled in as each fix is verified in the real game
-> ([docs/RUNTIME_NOTES.md](docs/RUNTIME_NOTES.md)). Reports are welcome at
-> <https://github.com/akitaonrails/rea-dirt-rally/issues>.
-<!-- TODO: when it plays, say where it was played end to end and what is
-not tested yet (native Windows, Steam Deck, Proton without the helper).
-No version number. Remove the note once every platform is verified. -->
+> Played end to end on Linux (Arch, NVIDIA, 4K) with an 8BitDo pad. Not
+> yet: the settings window, the AppImage, the Steam Deck, and the Windows
+> version of the game. Reports welcome in the
+> [issues](https://github.com/akitaonrails/rea-dirt-rally/issues).
 
-<!-- Showcase video: the owner records it and hosts it outside the
-repository, with its poster image. Uncomment and fill:
-[![TODO: what the video shows](https://TODO/showcase-poster.jpg)](https://TODO/showcase.mp4)
+[![A DiRT Rally stage at 4K through the launcher](https://new-uploads-akitaonrails.s3.us-east-2.amazonaws.com/2026/11/02/dirt-rally-launcher/showcase-poster.jpg)](https://new-uploads-akitaonrails.s3.us-east-2.amazonaws.com/2026/11/02/dirt-rally-launcher/showcase-h264.mp4)
 
-*TODO: what is shown, on which platform. Click to watch (m:ss, with sound).*
--->
+*A stage of DiRT Rally at 4K with a gamepad, started through the launcher. Click to watch.*
 
 ## Problems this launcher solves
 
-<!-- TODO: one row per problem, verified in the real game, from "won't
-start" to "nice to have" (5–12 rows). Credit the community project in the
-row that uses it. Not yet fixed → Known limitations, never here. -->
-
-| Problem | What the launcher does |
-| --- | --- |
-| Patching the game folder risks the copy you own. | Your folder is only read; the launcher works on its own private copy. |
+| Without the launcher | With it |
+|---|---|
+| The game crashes as soon as it starts on AMD Ryzen 5000 and newer (and recent Intel) CPUs | Starts and plays normally |
+| "Error while loading shared libraries": modern Linux no longer ships the old libraries the 2017 port needs | They come with the launcher and are given only to the game |
+| An "Unsupported Linux distribution" warning and Feral's pre-game window at every start | The game goes straight to its intro at your screen's size |
+| On a desktop with several monitors the game can open on the wrong one | With gamescope it opens fullscreen on the monitor you are using |
+| The game writes into its own folder | It plays from a private copy; your folder is only read |
 
 ## Screenshots
 
-<!-- TODO: the window's tabs, JPEG under ~1 MB each in docs/images/
-(launcher-<tab>.jpg, about 1600 px wide), current, with alt text; then an
-optional gameplay or before/after image. List them in THIRD_PARTY.md.
-| Play | Picture | Controls |
-| --- | --- | --- |
-| ![The Play tab: TODO](docs/images/launcher-play.jpg) | ![The Picture tab: TODO](docs/images/launcher-picture.jpg) | ![The Controls tab: TODO](docs/images/launcher-controls.jpg) |
--->
+The settings window is not built yet; its screenshots will be here.
 
 ## What you need
 
-Your installed PC copy of **DiRT Rally**: the folder with `drt.exe`.
+- **DiRT Rally for Linux**, Feral Interactive's port, version 1.0 (the
+  final 2017 build). The folder holds `bin/DirtRally` and a `share`
+  folder; you can choose that folder or the one just above it.
+- **A copy that already runs without Steam.** DiRT Rally was withdrawn
+  from sale in 2022, and the launcher has to start the game without the
+  Steam client. It does not change Steam or copy-protection files, it
+  does not apply cracks, and we can't and won't explain how to get such
+  a copy.
+- **gamescope**, if you have more than one monitor (installed on the
+  system, or in a container such as the
+  [distrobox-gaming](https://github.com/akitaonrails/distrobox-gaming)
+  `gaming` box).
+- About **40 GB** of free space for the private copy, unless the game is
+  on the same disk as your home folder (then the copy takes almost no
+  space).
 
-<!-- TODO: the editions and version supported, in words; what to do with
-an older copy (an official patch and where to get it). -->
+The Windows version of the game is recognised but not supported yet: its
+copy stops while loading under Wine, and the launcher says so instead of
+starting it.
 
-The launcher knows each supported `drt.exe` by its fingerprint
-(SHA-256). Another version is refused with its code and a link to the
-[unknown version](https://github.com/akitaonrails/rea-dirt-rally/issues/new?template=unknown-edition.yml)
-form, so it can be added. Report the code, never the game's files.
+Any other build is refused with a code (its SHA-256). Please report it with
+the [unknown edition form](https://github.com/akitaonrails/rea-dirt-rally/issues/new?template=unknown-edition.yml):
+report the code, never the game file.
 
 ## Download and install
 
-Download from the
-[latest release](https://github.com/akitaonrails/rea-dirt-rally/releases/latest):
+Download from the [latest release](https://github.com/akitaonrails/rea-dirt-rally/releases/latest):
 
-- **Windows, Steam Deck and Proton:** `DiRTRallyLauncher-<version>.zip`
-- **Linux:** `DiRTRallyLauncher-<version>-x86_64.AppImage`
+### Linux
 
-### Windows
-
-1. Unzip `DiRTRallyLauncher-<version>.zip` anywhere outside the game folder.
-   Keep its folders next to `DiRTRallyLauncher.exe`.
-2. Run `DiRTRallyLauncher.exe` and follow [First run](#first-run).
+1. Download `DiRTRallyLauncher-…-linux-x86_64.zip` and unpack it
+   anywhere. Keep its folders together.
+2. Start it with `linux/dirtrally-play` (see **First run**).
 
 ### Steam Deck
 
-1. In Desktop Mode, unzip the release, then in Steam choose *Games → Add a
-   Non-Steam Game to My Library…* and pick `DiRTRallyLauncher.exe`.
-2. In its *Properties → Compatibility*, force a Proton version.
-3. Back in Game Mode, start it: the window works with the controls and
-   recommends the **Steam Deck** look.
-
-<!-- TODO: say whether Game Mode has been verified. -->
-
-### Linux: AppImage
-
-```sh
-chmod +x DiRTRallyLauncher-*-x86_64.AppImage
-./DiRTRallyLauncher-*-x86_64.AppImage
-```
-
-It brings its own Wine, so nothing else needs to be installed. It keeps
-its Wine prefix in `~/.local/share/dirtrally-launcher/prefix` and uses
-[gamescope](https://github.com/ValveSoftware/gamescope) when it is
-installed.
-
-### Linux: Steam (Proton)
-
-Unzip the release, add `DiRTRallyLauncher.exe` as a non-Steam game and force a
-Proton version in its compatibility settings, as on the Steam Deck.
-
-### Linux: your own Wine
-
-Run `linux/dirtrally-play` from the unzipped release:
-
-```sh
-linux/dirtrally-play            # the settings window, then the game
-linux/dirtrally-play --play     # the game with the saved settings, no window
-linux/dirtrally-play stop       # end the game
-linux/dirtrally-play status     # running or idle
-```
-
-It needs Wine; gamescope is optional. Options, a distrobox and more:
-[linux/README.md](linux/README.md).
+Not checked yet. The same package should work in Desktop Mode; Game Mode
+reports are welcome.
 
 ## First run
 
-1. In the window's **Play** tab, press **Browse…** and choose the folder
-   with `drt.exe`. Under Wine your Linux files are on drive `Z:`, for
-   example `Z:\home\you\Games\DiRT Rally`.
-2. Pick a look: **Recommended** suits most screens.
-3. Press **Play** (or Enter, or Start on a gamepad).
+Tell the launcher where your game is, once:
 
-The first start copies the game into the launcher's private folder; later
-starts copy only what changed. Your choices are remembered.
+```sh
+linux/dirtrally-play --play --game "/path/to/DiRT Rally"
+```
 
-<!-- TODO: the size of the first copy and how long it takes; any one-time
-button (a download): what it fetches, how big, from where, and that
-nothing downloads unless pressed. -->
+It remembers the folder. After that:
+
+```sh
+linux/dirtrally-play --play
+```
+
+The first start makes the private copy of the game. From another disk or a
+network share that copies about 40 GB and takes a while (about 25 minutes
+from a NAS); later starts copy only what changed. Then the game starts
+fullscreen at your screen's size.
+
+If gamescope lives in a distrobox, run it through the box (your settings
+and saves stay in your own home folder):
+
+```sh
+DIRTRALLY_RUN="distrobox enter gaming --" linux/dirtrally-play --play
+```
+
+To quit, use the game's own **Quit**, or run `linux/dirtrally-play stop`
+from another terminal.
 
 ## The settings window
 
-<!-- TODO: one short paragraph per tab, in player words. -->
-
-| Look | What it sets | When to pick it |
-| --- | --- | --- |
-| **Original** | The game as it shipped | To play it as in its day |
-| **Recommended** | TODO | Most screens (picked on the first run) |
-| **Steam Deck** | TODO (1280×800) | The Steam Deck (picked on a Deck) |
-| **Custom** | Any change in the other tabs | |
-
-The window works with a gamepad (d-pad moves, A changes the focused
-setting, LB/RB switch tabs, Start plays) and with the keyboard alone (Tab
-moves, arrows pick, Ctrl+Tab switches tabs, Enter plays). A control that
-can't be used right now is greyed out and says why.
+Not built yet. Until then, the options below are set on the command line
+or in `launcher.cfg`.
 
 ## Gamepad
 
-<!-- TODO (optional: delete when the launcher does nothing for pads): what
-the launcher does for pads, verified tips, and the layout:
-| On the pad | In menus | In a race |
-| --- | --- | --- |
--->
+Gamepads work in the game; you may need to set the buttons in its
+**Options → Controls**. Newer pads (an 8BitDo, recent Xbox-style pads)
+are unknown to the game's own 2016 controller library, so it starts on the
+keyboard. The launcher now describes every connected pad with the
+standard layout to the game, so it should use its built-in pad controls
+without remapping; that part is still being checked.
+
+Connect the pad before you start.
+Pick **Gamepad** once in the game's **Options → Controls** if your profile
+was set to the keyboard before. Pads connected after the game starts are
+seen on the next start. Button changes and force feedback stay in the
+game's own Controls menu.
 
 ## Options
 
-Every option has the same name in the window, in `launcher.cfg` (with
-underscores) and on the command line (with hyphens); `DiRTRallyLauncher.exe
---help` lists them. The first run writes a commented `launcher.cfg`
-([Where things live](#where-things-live)).
+| Option | What it does | Values | Unset |
+|---|---|---|---|
+| `look` | **Recommended**: straight into the game at your screen's size. **Steam Deck**: the same at 1280×800. **Original**: Feral's pre-game window first, as the game shipped | `recommended`, `steam_deck`, `original` | Recommended on first run |
+| `resolution` | The size the game opens at | `fullscreen`, a size such as `2560x1440`, or `original` (choose it in Feral's window) | your screen's size |
+| `game` | Your game folder | a folder | asked on first run |
+| `runtime` | Where the private copy lives | a folder | `~/.local/share/dirtrally-launcher/runtime` |
 
-<!-- TODO: one row per option in the option table (config.rs OPTIONS), in
-window order; nothing missing, nothing extra. "In the window" is
-"Tab: Label" exactly as the window shows it. -->
+Every option is a line in `~/.config/dirtrally-launcher/launcher.cfg`
+(`look = recommended`) and a flag (`--look steam_deck`,
+`--resolution 3840x2160`). Graphics quality is the game's own: change it in
+its **Options → Graphics**. 4K works.
 
-| `launcher.cfg` / flag | In the window | Values | Unset | What it changes |
-| --- | --- | --- | --- | --- |
-| `game` / `--game` | Play: Game folder | a folder | asked on the first run | The folder with `drt.exe`; only read. Remembered. |
-| `look` / `--look` | Play: Look | `original`, `recommended`, `steam_deck` | the recommended look | Sets the picture options at once; options set after it win. |
-| `resolution` / `--resolution` | Picture: Resolution | `WIDTHxHEIGHT`, `original` | the game's | The game's screen size. |
-| `vsync` / `--vsync` | Picture: VSync | `on`, `off` | the game's | Waits for the screen's refresh: no tearing. |
-| `runtime` / `--runtime` | — (file and flag only) | a folder | `runtime` beside `launcher.log` | Where the launcher keeps its private copy of the game. |
-
-Unset means the game keeps its own value; a value you set and later unset
-goes back to the game's, unless you changed it in the game since.
-
-Any option on the command line skips the window and plays; options
-override `launcher.cfg` for that run only, and only `--game` is
-remembered. The launcher's own switches:
-
-- `--no-window`: play with the saved settings, no window.
-- `--check`: check the game folder and the bundled files without playing;
-  the report goes to `launcher.log` (exit 0 ready, 1 not).
-- `--settings`: only the settings window (exit 0 Play pressed, 3 closed
-  without Play, 4 no window possible).
-- `--linux`: started by `dirtrally-play` or the AppImage.
-- `--help`: every option and its values.
-
-A bad flag or value exits with 2 and a message naming what it takes.
+`DiRTRallyLauncher --help` lists everything; `DiRTRallyLauncher --check`
+checks your game folder without starting anything.
 
 ## Where things live
 
-| What | Windows | Linux (AppImage, `dirtrally-play`) |
-| --- | --- | --- |
-| Settings (`launcher.cfg`) and log (`launcher.log`) | `%LOCALAPPDATA%\DiRTRallyLauncher\` | in the Wine prefix, `drive_c/users/<you>/AppData/Local/DiRTRallyLauncher/` |
-| The launcher's copy of the game | `%LOCALAPPDATA%\DiRTRallyLauncher\runtime` (the `runtime` option moves it) | the same folder inside the prefix |
-| Your saves | TODO | TODO |
-| Wine prefix | — | `~/.local/share/dirtrally-launcher/prefix` |
-| `dirtrally-play`'s logs and lock | — | `~/.config/dirtrally-launcher` |
-
-A `launcher.cfg` next to `DiRTRallyLauncher.exe` is used instead (a portable
-install). Under Proton everything is inside Steam's prefix for the
-non-Steam game (`steamapps/compatdata/<id>/pfx`).
-
-<!-- TODO: where the game writes its saves (a saves folder the launcher
-mirrors, or only the runtime copy), and any registry key the launcher
-writes. -->
+| What | Where |
+|---|---|
+| Launcher settings and log | `~/.config/dirtrally-launcher/` (`launcher.cfg`, `launcher.log`, `play.log`) |
+| Private copy of the game | `~/.local/share/dirtrally-launcher/runtime` |
+| The game's settings | `~/.local/share/feral-interactive/DiRT Rally/` |
+| Your saves (profile, career) | where your copy of the game keeps them; the copies tested here use `~/.local/share/Steam/ACTiVATED/310560/remote/` |
 
 ## Troubleshooting
 
-- **"This drt.exe is not a version the launcher knows"**: your copy is
-  a version not supported yet. Open the
-  [unknown version](https://github.com/akitaonrails/rea-dirt-rally/issues/new?template=unknown-edition.yml)
-  form with the code the message shows and where your copy comes from.
-<!-- TODO: the 3–6 most likely real problems found in testing, each as a
-bold symptom and what to do. -->
-- **Anything else:** run `DiRTRallyLauncher.exe --check`, then open a
-  [bug report](https://github.com/akitaonrails/rea-dirt-rally/issues/new?template=bug-report.yml)
-  with `launcher.log` attached (remove personal paths). Never attach game
-  files.
+- **"There is no DiRT Rally in …"**: choose the folder that holds
+  `bin/DirtRally`, or the one just above it.
+- **"This … is not a build this launcher knows"**: see **What you need**;
+  report the code it shows.
+- **The game opens on the wrong monitor, or rotated**: use gamescope (see
+  **First run**), or set `resolution` to your main monitor's size.
+- **The pad does nothing in the game**: connect it before starting, then
+  pick **Gamepad** in the game's **Options → Controls**.
+- **Anything else**: open an issue and attach `launcher.log` and
+  `play.log` from `~/.config/dirtrally-launcher/` (remove personal paths
+  if you like).
 
 ## Known limitations
 
-<!-- TODO: what the launcher doesn't fix, what you lose when a fix can't be
-automated, and the platforms not verified yet. -->
-
-- Not yet verified on native Windows, the Steam Deck, or Proton without
-  `dirtrally-play`; see [docs/RUNTIME_NOTES.md](docs/RUNTIME_NOTES.md).
+- The Windows version of the game is not supported yet (it stops while
+  loading under Wine).
+- No settings window yet; options are set on the command line or in
+  `launcher.cfg`.
+- Not yet checked: the automatic gamepad set-up (see **Gamepad**), the
+  AppImage, the Steam Deck, wheels, and pads plugged in while the game
+  runs.
+- Online features are gone for everyone: RaceNet shut down in 2025, so
+  online events, leagues and their achievements no longer work. Offline
+  career and single stages work.
 
 ## Uninstall
 
-1. **Back up your saves first** (see [Where things live](#where-things-live)).
-   <!-- TODO: name the folder(s), and say if a step below deletes them. -->
-2. Delete the folder you unzipped the launcher into (or the AppImage).
-3. Windows: delete `%LOCALAPPDATA%\DiRTRallyLauncher` (settings, log and the
-   private copy of the game).
-4. Linux: copy your saves out of the prefix, then delete
-   `~/.local/share/dirtrally-launcher` and `~/.config/dirtrally-launcher`. With
-   Proton, removing the shortcut in Steam offers to delete its prefix,
-   saves included.
-
-Your game folder was never changed, so there is nothing to undo there.
+Delete the launcher's folder and its private copy
+(`~/.local/share/dirtrally-launcher/`). Your game folder was never
+changed. `~/.config/dirtrally-launcher/` holds only the launcher's
+settings and logs. Keep the game's settings and saves (see **Where things
+live**) unless you want to start over: back them up first.
 
 ## For developers
 
-Rust (edition 2024), MinGW-w64 with lld for the Windows target, Wine for
-the Windows-target tests and `cargo-deny`. The
-[`gaming` distrobox](https://github.com/akitaonrails/distrobox-gaming) has
-them all.
-
 ```sh
-cargo fmt --all --check
-cargo test --workspace --locked                 # host tests, the settings window headless
-cargo clippy --target i686-pc-windows-gnu --workspace --all-targets -- -D warnings
-cargo deny check
-for t in linux/tests/*.sh packaging/tests/*.sh; do sh "$t"; done
-cargo build --release --locked --target i686-pc-windows-gnu
-sdk/scripts/wine-test --locked --workspace      # Windows-target tests under Wine, headless
-sh ../rea-launcher-sdk/scripts/sdk-sync --check .   # sdk/ matches the pinned SDK
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+sh linux/tests/play.sh
+sh packaging/tests/package.sh
+packaging/package.sh --no-appimage dist/DiRTRallyLauncher-dev-linux-x86_64
 ```
 
-- New SDK release: `sdk/scripts/sdk-bump vX.Y.Z` moves the Cargo tags,
-  `sdk/` and the workflow pins together and prints the migration notes.
-- Free the disk space builds take: `sdk/scripts/clean` (a dry run), then
-  `sdk/scripts/clean --yes`.
-- Real-game tests read your installed copy and never change it:
-  `DIRTRALLY_GAME_DIR=<game folder> cargo test -- --ignored`.
-- Third-party components are fetched at package time from pinned URLs
-  with SHA-256 (`packaging/`); GitHub Actions (the SDK's reusable
-  workflows) runs the checks, builds the zip and the AppImage, and
-  publishes a release for each `v*` tag.
+Tests run headless and never touch your real folders. Real-game checks are
+env-gated (`DIRTRALLY_GAME_DIR=… cargo test -- --ignored`) and recorded in
+[docs/RUNTIME_NOTES.md](docs/RUNTIME_NOTES.md); the research behind each
+fix is in [docs/RESEARCH.md](docs/RESEARCH.md). Read [AGENTS.md](AGENTS.md)
+before changing anything: it holds the rules, including the owner's
+decision on pre-activated copies.
 
-Rules for contributors and coding agents: [AGENTS.md](AGENTS.md).
-Community fixes and decisions: [docs/RESEARCH.md](docs/RESEARCH.md); what
-was verified in the real game: [docs/RUNTIME_NOTES.md](docs/RUNTIME_NOTES.md).
+## How it works
 
-<!-- Optional: ## How it works — 4–6 plain steps of what happens on Play. -->
+- **Editions** are identified by SHA-256 (`edition.rs`); unknown builds are
+  refused.
+- **The PKU crash**: the 2017 binary maps memory execute-only and then
+  reads it, which faults on CPUs with memory protection keys.
+  `dirtrally-exec-read`, a small `LD_PRELOAD` library, gives such mappings
+  read access too.
+- **Legacy libraries** (OpenSSL 1.0, libidn11, librtmp, OpenLDAP 2.4,
+  GConf, …) come from pinned Steam Runtime 1 packages and reach only the
+  game's process (`plan.rs`).
+- **Feral's pre-game window** is skipped with the values its own decision
+  reads (found by decompiling it), and the game's size is set at the same
+  time; skipping without a size crashes the game (`prefs.rs`).
+- **Gamepads**: a mapping per connected pad in the numbering the game's SDL
+  2.0.5 uses, from sysfs (`pads.rs`).
 
 ## Built on rea-launcher-sdk
 
 The private copy of the game, `launcher.cfg` and the option table, the
-settings window's widgets, the Linux helper's library (`rea-play.sh`),
-packaging and CI come from
-[rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk), shared by every rea launcher. It is pinned
-by tag in `Cargo.toml` and vendored in `sdk/` (the tag is in
-`sdk/VERSION`). This repository keeps what is specific to DiRT Rally.
+Linux helper's library (`rea-play.sh`), packaging and CI come from
+[rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk),
+shared by every rea launcher. It is pinned by tag in `Cargo.toml` and
+vendored in `sdk/` (the tag is in `sdk/VERSION`). This repository keeps
+what is specific to DiRT Rally.
 
 ## Contributing
 
-- **About DiRT Rally** (its versions, fixes, settings, `dirtrally-play`'s game
-  settings, this README): issues and pull requests here.
-- **Shared code** (the private copy, the settings window's widgets, the
-  option table, `rea-play.sh`, packaging, CI workflows, anything under
-  `sdk/`): issues and pull requests at
+- **About DiRT Rally** (its versions, fixes, settings, `dirtrally-play`'s
+  game settings, this README): issues and pull requests here.
+- **Shared code** (the private copy, the option table, `rea-play.sh`,
+  packaging, CI workflows, anything under `sdk/`): issues and pull
+  requests at
   [rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk/issues).
-- **How to tell:** code under `sdk/` or from a `rea_launcher*` crate is
-  the SDK's; if the same problem would happen with another rea launcher,
-  it's the SDK's. Not sure? Open it here and it will be moved.
+- **How to tell:** code under `sdk/` or from a `rea_launcher*` crate is the
+  SDK's; if the same problem would happen with another rea launcher, it's
+  the SDK's. Not sure? Open it here and it will be moved.
 - Never patch `sdk/` or copy SDK code here: fix the SDK and bump the tag.
 - Never attach game files (executables, saves, data) to an issue.
 
 ## Credits
 
-<!-- TODO: one line per community project the launcher bundles,
-configures, downloads or reimplements (author, link, what it does here),
-the window's imagery (author, licence), Wine and Kron4ek's builds, the
-AppImage tools, and where the fixes were found (PCGamingWiki). Every
-THIRD_PARTY.md entry has a line here. -->
-
-- The Barlow fonts by Jeremy Tribby (SIL Open Font License).
+- Feral Interactive for the Linux port, and the players who documented its
+  problems: PCGamingWiki, ProtonDB, the ArchWiki, Valve's steam-runtime
+  issue tracker and FeralInteractive/ferallinuxscripts issue #3 (where the
+  execute-only memory crash and its `mprotect` workaround were found).
+- The Steam Runtime 1 ("scout") packages, for the legacy libraries.
+- gamescope, for the fullscreen session.
+- quick-xml and the Rust `libc` crate.
 - [rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk).
 
 Full list with licences: [THIRD_PARTY.md](THIRD_PARTY.md).
 
 ## Legal
 
-DiRT Rally belongs to its publisher. This project is not affiliated with or
-endorsed by them, contains no game files, and only runs a copy you own.
-<!-- TODO: name the copyright holder ("DiRT Rally is © …"). -->
+DiRT Rally is © Codemasters; the Linux port is by Feral Interactive. This
+project is not affiliated with or endorsed by them and contains no game
+files. It needs a copy of the game that already runs without Steam; it does
+not provide one, does not change Steam or copy-protection files, and we
+can't and won't explain how to get such a copy.
 Our code is MIT OR Apache-2.0 ([LICENSE-MIT](LICENSE-MIT),
 [LICENSE-APACHE](LICENSE-APACHE)); bundled components keep their own
 licences ([THIRD_PARTY.md](THIRD_PARTY.md)).
