@@ -1,12 +1,17 @@
 //! The private runtime copy of the game folder (`rea_launcher::runtime`).
 //!
-//! The player's folder is only read. The launcher brings its files into a
-//! runtime folder of its own and changes only that copy: every write there
-//! is a whole-file swap (`rea_launcher::fsx`). [`GamePolicy`] says which
-//! files are large read-only data (hard-linked when the disk allows),
-//! which the game writes itself (never overwritten once present: saves,
-//! its own settings) and which the launcher places (components, generated
-//! configuration). Fill it in from Phase 2 of the playbook.
+//! The player's folder is only read. DiRT Rally's Linux port writes into its
+//! own folder (its embedded browser creates `bin/libpdf.so/` at start,
+//! docs/RUNTIME_NOTES.md), so the game always runs from a copy the
+//! launcher owns.
+//!
+//! [`GamePolicy`]: the 40 GB of game data under `share/` is only read, so it
+//! is hard-linked when the runtime is on the same disk (a near-instant
+//! setup) and copied otherwise. `bin/`, `lib/` and `config/` are small and
+//! always copied. The game keeps its settings and saves under
+//! `$HOME/.local/share/feral-interactive/DiRT Rally/`, never in its folder,
+//! so nothing here is game-written. The launcher places nothing in the
+//! runtime: its libraries live in its own package.
 
 use std::io;
 use std::path::Path;
@@ -17,23 +22,26 @@ use rea_launcher::runtime::{self, Policy, Stamp, SyncReport};
 /// The runtime's record of what it brought over.
 pub const MANIFEST: &str = ".dirtrally-manifest";
 
-/// What DiRT Rally does with its files.
+/// What DiRT Rally's Linux port does with its files.
 pub struct GamePolicy;
 
+/// The read-only game data: `share/…` in any letter case.
+fn is_data(rel: &str) -> bool {
+    rel.split('/')
+        .next()
+        .is_some_and(|top| top.eq_ignore_ascii_case("share"))
+        && rel.contains('/')
+}
+
 impl Policy for GamePolicy {
-    /// Static data the game only reads (never anything it opens for
-    /// writing). Nothing yet: everything is copied.
-    fn link(&self, _rel: &str) -> bool {
-        false
+    fn link(&self, rel: &str) -> bool {
+        is_data(rel)
     }
 
-    /// Files the game writes: saves, its own settings. Copied once, then
-    /// left as the game keeps them. Nothing known yet.
     fn game_written(&self, _rel: &str, _source: Stamp) -> bool {
         false
     }
 
-    /// Files the launcher places itself. Nothing yet.
     fn owned(&self, _rel: &str, _source: Stamp) -> bool {
         false
     }
@@ -49,27 +57,85 @@ fn sync(game: &Path, runtime: &Path) -> io::Result<SyncReport> {
     runtime::sync(game, runtime, &GamePolicy, MANIFEST)
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use std::fs;
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+
+    fn scratch(name: &str) -> std::path::PathBuf {
+        let root =
+            std::env::temp_dir().join(format!("dirtrally-runtime-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        root
+    }
+
+    /// A tiny folder in the Linux port's shape.
+    fn feral_layout(game: &Path) {
+        fs::create_dir_all(game.join("bin")).unwrap();
+        fs::create_dir_all(game.join("lib/x86_64")).unwrap();
+        fs::create_dir_all(game.join("share/data/system")).unwrap();
+        fs::write(game.join("bin/DirtRally"), b"exe").unwrap();
+        fs::set_permissions(
+            game.join("bin/DirtRally"),
+            fs::Permissions::from_mode(0o755),
+        )
+        .unwrap();
+        fs::write(game.join("lib/x86_64/libSDL2-2.0.5.so"), b"lib").unwrap();
+        fs::write(
+            game.join("share/data/system/hardware_settings_config.xml"),
+            b"xml",
+        )
+        .unwrap();
+    }
 
     #[test]
-    fn the_game_is_copied_and_never_changed() {
-        let root =
-            std::env::temp_dir().join(format!("dirtrally-runtime-test-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&root);
-        let (game, rt) = (root.join("Jogos d'Ação"), root.join("runtime"));
-        fs::create_dir_all(game.join("data")).unwrap();
-        fs::write(game.join("drt.exe"), b"exe").unwrap();
-        fs::write(game.join("data/a.bin"), b"data").unwrap();
+    fn only_the_game_data_is_linked() {
+        for rel in ["share/data/game.bin", "Share/FeralUI/x.html", "share/a"] {
+            assert!(GamePolicy.link(rel), "{rel}");
+        }
+        for rel in [
+            "bin/DirtRally",
+            "lib/x86_64/libcef.so",
+            "config/x.sh",
+            "share",
+            "DirtRally.sh",
+        ] {
+            assert!(!GamePolicy.link(rel), "{rel}");
+        }
+    }
+
+    #[test]
+    fn the_player_starts_from_a_copy_and_their_folder_never_changes() {
+        let root = scratch("story");
+        let (game, rt) = (root.join("Jogos d'Ação/DiRT Rally"), root.join("runtime"));
+        feral_layout(&game);
 
         let report = prepare(&game, &rt).unwrap();
-        assert_eq!(report.brought, 2);
-        assert_eq!(fs::read(rt.join("data/a.bin")).unwrap(), b"data");
-        // A second run brings nothing new.
+        assert_eq!(report.brought, 3);
+        // Same disk: the data is a hard link, the program a copy.
+        let data = "share/data/system/hardware_settings_config.xml";
+        assert_eq!(
+            fs::metadata(rt.join(data)).unwrap().ino(),
+            fs::metadata(game.join(data)).unwrap().ino()
+        );
+        assert_ne!(
+            fs::metadata(rt.join("bin/DirtRally")).unwrap().ino(),
+            fs::metadata(game.join("bin/DirtRally")).unwrap().ino()
+        );
+        // The program stays executable.
+        let mode = fs::metadata(rt.join("bin/DirtRally"))
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o111, 0o111);
+
+        // The game makes its folder in the runtime; the next start keeps it
+        // and brings nothing new.
+        fs::create_dir_all(rt.join("bin/libpdf.so")).unwrap();
         assert_eq!(prepare(&game, &rt).unwrap().brought, 0);
-        assert_eq!(fs::read(game.join("drt.exe")).unwrap(), b"exe");
+        assert!(rt.join("bin/libpdf.so").is_dir());
+        assert!(!game.join("bin/libpdf.so").exists());
 
         // A runtime inside the game folder is refused.
         assert!(prepare(&game, &game.join("runtime")).is_err());

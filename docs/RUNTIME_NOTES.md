@@ -65,3 +65,15 @@ in place (read-only).
   native build. Default quality preset after first run: `ultralow`.
 - Not yet: real audio (PipeWire), gamepad, quality/resolution settings,
   clean quit, saves.
+
+## 2026-11-02: launcher pieces against the real game
+
+- `dirtrally-exec-read` (our Rust library) instead of the C test shim:
+  benchmark stage drives normally.
+- `LD_PRELOAD=libsteam_api.so:libdirtrally_exec_read.so` by name, found
+  through `LD_LIBRARY_PATH` (runtime `lib/x86_64`, compat libs, the
+  library's folder): the game starts as before.
+- A fresh home seeded with only
+  `SeenSpecificationAlertUUIDLnxDistributionUnsupported=1` in `Setup`
+  (`prefs::configure(None)`): the game accepts it, fills in the rest (86
+  lines) and keeps the value; no unsupported-distro alert.

@@ -420,6 +420,7 @@ dependencies = [
 name = "dirtrally-launcher"
 version = "0.1.0"
 dependencies = [
+ "quick-xml",
  "rea-launcher",
  "rea-launcher-ui",
  "rea-launcher-win32",

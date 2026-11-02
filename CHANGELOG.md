@@ -18,3 +18,12 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
 - `dirtrally-exec-read`: a small preload library that makes executable
   memory readable, fixing the Linux port's start-up crash on CPUs with
   memory protection keys (AMD Zen 3 and later). Verified on a stage run.
+- Runtime policy for the Linux port: the game data (`share/`) is hard-linked
+  when on the same disk, the program folders are copied; the game always
+  runs from that private copy.
+- Start plan (`plan.rs`): the environment Feral's own script sets, plus the
+  legacy libraries and the exec-read fix, with library names that survive
+  spaces in paths. A folder with `:` is refused with a reason.
+- The game's `preferences` file: owned values spliced into the game's own
+  text; seeded when missing. Hides the "Unsupported Linux distribution"
+  alert.

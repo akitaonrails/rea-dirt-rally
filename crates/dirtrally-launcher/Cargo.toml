@@ -16,6 +16,7 @@ path = "src/main.rs"
 rea-launcher.workspace = true
 # Its Windows parts are cfg(windows); the console decision is portable.
 rea-launcher-win32.workspace = true
+quick-xml = "0.41"
 
 [target.'cfg(windows)'.dependencies]
 rea-launcher-ui.workspace = true

@@ -14,6 +14,8 @@ pub mod cli;
 pub mod config;
 pub mod edition;
 pub mod form;
+pub mod plan;
+pub mod prefs;
 pub mod runtime;
 
 #[cfg(any(windows, test))]
