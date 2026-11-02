@@ -1,0 +1,48 @@
+# Runtime notes
+
+What ran in the real game, and what has not been checked yet.
+
+## 2026-11-02: first headless runs (Linux native, ACTiVATED 1.0RC14)
+
+Host: Ryzen 9 7950X3D (32 threads, PKU), RTX 5090, Arch `gaming` distrobox,
+`gamescope --backend headless`, isolated `HOME` under `.work/`, game read
+in place (read-only).
+
+- Old libraries from the Steam scout runtime, scoped to the game process
+  only: `ldd` resolves. (Leaking them into gamescope crashes gamescope.)
+- Without a shim: SIGSEGV on the main thread at `0x1f3e7ee`,
+  `mov (%rax,%rdi,1),%rbx`, `rax` inside an anonymous `--xp` mapping.
+  An 8-CPU `get_nprocs`/`sysconf` shim did **not** help.
+- With an exec-implies-read shim (`mmap`/`mprotect`) plus the game's own
+  `libsteam_api.so` preload: no crash for 130 s; Feral launcher renders.
+- `SeenSpecificationAlertUUIDLnxDistributionUnsupported=1` removes the
+  unsupported-distro alert. The pre-game launcher is still shown (see
+  RESEARCH #6). `CrashCounter` rises on each forced kill.
+- Not yet: pressing Play, menus, a stage, audio (runs used
+  `SDL_AUDIODRIVER=dummy`), gamepad, clean quit.
+
+## 2026-11-02: Windows RELOADED install (testing)
+
+- `setup.exe /VERYSILENT /SUPPRESSMSGBOXES` under Wine with the null
+  driver stops at the repack's own message box, which ignores
+  `/SUPPRESSMSGBOXES`. Killed cleanly; nothing installed. Needs another way
+  to install for testing.
+- Visible install (owner clicked through): works. The repack's installer
+  plays loud background music (`bassmusic.dll`); next time start it with
+  Wine audio off (`WINEDLLOVERRIDES=winepulse.drv,winealsa.drv=d`).
+
+## 2026-11-02: Windows RELOADED v1.1 under plain Wine 11.21 (testing)
+
+- The installer already places the pre-activated `drt.exe` (same SHA-256
+  as the ISO's `crack/drt.exe`). Owner-approved test: the ISO's `crack/*`
+  copied over the scratch install in `.work/` only.
+- DXVK 3.1.1 (x32 `d3d11`, `dxgi`, `d3d10core`), gamescope headless, audio
+  drivers off: `steam_apir.dll failed to initialize, aborting`, status
+  `c0000142`, before any game code runs. Same with
+  `WINE_CPU_TOPOLOGY=8:0,…,7`. `steam_apir.dll` imports only system DLLs
+  (no missing runtime). That DLL belongs to the crack; per the owner
+  decision we don't debug it. The Windows edition is blocked here.
+- `drt.exe` imports: d3d11, D3DCOMPILER_43, d3dx11_43, XINPUT1_3, DINPUT8,
+  bink2w32 (shipped), steam_api, winhttp, gdiplus, …
+- gamescope 3.x segfaults on teardown after the session ends (both runs);
+  harmless for the test, worth watching in the helper.

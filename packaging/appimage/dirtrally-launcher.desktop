@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=DiRT Rally Launcher
+Comment=Play your own copy of DiRT Rally with modern compatibility fixes
+Exec=dirtrally-play
+Icon=dirtrally-launcher
+Terminal=false
+Categories=Game;

@@ -1,0 +1,48 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
+jobs:
+  # The shared rea-launcher-sdk CI: formatting, host tests, cargo audit and
+  # deny, sdk/ drift, shell syntax and the Linux helper and packaging tests,
+  # Windows-target clippy, the release build, the Windows-target tests under
+  # Wine (headless), packaging and the package allowlist
+  # (rea-launcher-sdk docs/playbooks/ci-and-releases.md).
+  ci:
+    uses: akitaonrails/rea-launcher-sdk/.github/workflows/launcher-ci.yml@v0.3.3
+    with:
+      rust-target: i686-pc-windows-gnu
+      wine-tests: true
+      package-command: packaging/package.sh "dist/DiRTRallyLauncher-$REA_VERSION_NAME"
+      package-dir: dist/DiRTRallyLauncher-*/
+      package-allowlist: packaging/package.allow
+      artifact-name: DiRTRallyLauncher-packages
+      artifact-paths: |
+        dist/*.zip
+        dist/*.AppImage
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: ci
+    # All three, even with attest: false (GitHub checks a called workflow's
+    # permissions before any if:).
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    uses: akitaonrails/rea-launcher-sdk/.github/workflows/launcher-release.yml@v0.3.3
+    with:
+      package: dirtrally-launcher
+      artifact-pattern: DiRTRallyLauncher-*
