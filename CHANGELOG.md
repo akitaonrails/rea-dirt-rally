@@ -27,3 +27,11 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
 - The game's `preferences` file: owned values spliced into the game's own
   text; seeded when missing. Hides the "Unsupported Linux distribution"
   alert.
+- Options: `look` (Original keeps Feral's pre-game window; Recommended and
+  Steam Deck start the game directly) and `resolution` (`fullscreen`, a size,
+  or `original`). The example `vsync` option is gone (not verified in this
+  game).
+- Linux launcher (`DiRTRallyLauncher`): `--check`, `--no-window` and the
+  Linux helper in native mode (`linux/dirtrally-play`); settings and log in
+  `~/.config/dirtrally-launcher`, the private copy in
+  `~/.local/share/dirtrally-launcher/runtime`.

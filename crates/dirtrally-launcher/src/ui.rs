@@ -241,7 +241,7 @@ fn play_tab(ui: &mut egui::Ui, w: &mut Window) {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = gap;
         for look in Look::ALL {
-            let note = look_note(look, w.screen);
+            let note = look_note(look);
             let card = LookCard {
                 title: look.label(),
                 note: &note,
@@ -250,7 +250,7 @@ fn play_tab(ui: &mut egui::Ui, w: &mut Window) {
                 ..LookCard::default()
             };
             if widgets::look_card(ui, vec2(width, 96.0), &card).clicked() {
-                w.form.choose_look(look, w.screen);
+                w.form.choose_look(look);
             }
         }
     });
@@ -258,19 +258,15 @@ fn play_tab(ui: &mut egui::Ui, w: &mut Window) {
 }
 
 /// A look card's note: its values in words.
-fn look_note(look: Look, screen: Option<(u32, u32)>) -> String {
-    let picture = look.picture(screen);
-    let size = match picture.resolution {
-        Some(rea_launcher::cfg::Resolution::Size(w, h)) => format!("{w}×{h}"),
-        Some(_) => "The game's own size".to_owned(),
-        None => "Your current size".to_owned(),
-    };
-    let vsync = match picture.vsync {
-        Some(true) => ", VSync on.",
-        Some(false) => ", VSync off.",
-        None => ".",
-    };
-    format!("{size}{vsync}")
+fn look_note(look: Look) -> String {
+    use rea_launcher::cfg::Resolution;
+    match look.picture().resolution {
+        Some(Resolution::Size(w, h)) => format!("Straight into the game at {w}×{h}."),
+        Some(Resolution::Fullscreen) | None => {
+            "Straight into the game at your screen's size.".to_owned()
+        }
+        Some(Resolution::Original) => "The game's own pre-game window first.".to_owned(),
+    }
 }
 
 /// Every option row that is not on the Play tab and has a window control.
@@ -284,7 +280,7 @@ fn picture_tab(ui: &mut egui::Ui, w: &mut Window) {
         ui.add_space(10.0);
     }
     if changed {
-        w.form.picture_edited(w.screen);
+        w.form.picture_edited();
     }
 }
 
@@ -453,26 +449,13 @@ mod tests {
         ui.run();
         let saved = ui.state().form.settings();
         assert_eq!(saved.look, Some(Look::SteamDeck));
-        let screen = ui.state().screen;
         let flag = flags(&["--look", "steam_deck"]);
-        assert_eq!(saved.picture(screen), flag.picture(screen));
+        assert_eq!(saved.picture(), flag.picture());
         assert_eq!(
-            saved.picture(screen).resolution,
+            saved.picture().resolution,
             Some(Resolution::Size(1280, 800))
         );
         assert!(testing::checked(&ui.get_by_label("Steam Deck")));
-    }
-
-    #[test]
-    fn the_vsync_switch_saves_what_its_flag_sets() {
-        let mut ui = open("vsync = on\n");
-        ui.get_by_role_and_label(Role::Tab, "Picture").click();
-        ui.run();
-        ui.get_by_role_and_label(Role::Switch, "VSync").click();
-        ui.run();
-        let saved = ui.state().form.settings();
-        assert_eq!(saved.vsync, Some(false));
-        assert_eq!(saved.vsync, flags(&["--vsync", "off"]).vsync);
     }
 
     #[test]

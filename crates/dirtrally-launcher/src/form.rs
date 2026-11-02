@@ -50,23 +50,22 @@ impl Form {
     }
 
     /// A look card was chosen: the look and all of its values.
-    pub fn choose_look(&mut self, look: Look, screen: Option<(u32, u32)>) {
+    pub fn choose_look(&mut self, look: Look) {
         *self.value_mut("look") = look.key().to_owned();
-        for (key, value) in look.picture(screen).values() {
+        for (key, value) in look.picture().values() {
             *self.value_mut(key) = value.unwrap_or_default();
         }
     }
 
     /// A picture option changed by hand: once the values differ from the
     /// look's, no look card stays selected.
-    pub fn picture_edited(&mut self, screen: Option<(u32, u32)>) {
+    pub fn picture_edited(&mut self) {
         let settings = self.settings();
         let current = Picture {
             resolution: settings.resolution,
-            vsync: settings.vsync,
         };
         if let Some(look) = settings.look
-            && look.picture(screen) != current
+            && look.picture() != current
         {
             self.value_mut("look").clear();
         }
@@ -121,7 +120,7 @@ mod tests {
         let text = "# mine\nresolution = 1280x720\nunknown = kept\n";
         let mut form = Form::from_text(text);
         assert_eq!(form.get("resolution"), "1280x720");
-        *form.value_mut("vsync") = "off".into();
+        *form.value_mut("look") = "original".into();
         form.value_mut("resolution").clear();
         let saved = form.save(text);
         assert!(
@@ -129,29 +128,32 @@ mod tests {
             "{saved}"
         );
         assert!(saved.contains("#resolution =\n"), "{saved}");
-        assert!(saved.contains("vsync = off\n"), "{saved}");
+        assert!(saved.contains("look = original\n"), "{saved}");
         assert_eq!(Form::from_text(&saved), form);
     }
 
     #[test]
     fn a_look_card_sets_its_values_until_one_is_changed() {
         let mut form = Form::from_text("");
-        form.choose_look(Look::SteamDeck, None);
+        form.choose_look(Look::SteamDeck);
         assert_eq!(form.look(), Some(Look::SteamDeck));
         assert_eq!(
-            form.settings().picture(None).resolution,
+            form.settings().picture().resolution,
             Some(Resolution::Size(1280, 800))
         );
-        form.picture_edited(None);
+        form.picture_edited();
         assert_eq!(
             form.look(),
             Some(Look::SteamDeck),
             "still the look's values"
         );
-        *form.value_mut("vsync") = "off".into();
-        form.picture_edited(None);
+        *form.value_mut("resolution") = "1920x1080".into();
+        form.picture_edited();
         assert_eq!(form.look(), None);
-        assert_eq!(form.settings().vsync, Some(false));
+        assert_eq!(
+            form.settings().resolution,
+            Some(Resolution::Size(1920, 1080))
+        );
     }
 
     #[test]
@@ -160,7 +162,7 @@ mod tests {
         *form.value_mut("resolution") = "huge".into();
         assert_eq!(
             form.problems(),
-            ["Resolution: needs WIDTHxHEIGHT or original"]
+            ["Resolution: needs WIDTHxHEIGHT, original, off, fullscreen, full or desktop"]
         );
     }
 }

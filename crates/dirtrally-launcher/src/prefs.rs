@@ -11,7 +11,7 @@
 //!                         <value name="FullScreen" type="integer">1</value>
 //! ```
 //!
-//! The launcher writes only the values it owns ([`OWNED`]). Each edit
+//! The launcher writes only the values it owns ([`start_values`]). Each edit
 //! splices those values into the original text, so every other byte — the
 //! player's settings, the order, the indentation — stays as the game wrote
 //! it. A missing file is seeded with just the owned values; the game fills
@@ -272,12 +272,46 @@ pub fn seed(path: &[&str], values: &[(&str, Value)]) -> String {
     )
 }
 
-/// The file's new text: the owned values set in `existing`, or a seeded
-/// file when there is none.
-pub fn configure(existing: Option<&str>) -> Result<String, String> {
+/// How the game starts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Start {
+    /// Feral's pre-game window first, as shipped: the launcher leaves its
+    /// values alone. `restore` puts the window back once after the launcher
+    /// had hidden it.
+    FeralWindow { restore: bool },
+    /// Straight into the game at this size. The game crashes when its
+    /// pre-game window is skipped while `ScreenW`/`ScreenH` are still 0, so
+    /// both are always set; `CrashCounter` above 0 would bring the window
+    /// back after a crash (docs/RUNTIME_NOTES.md).
+    Direct { width: u32, height: u32 },
+}
+
+/// The values the launcher sets for `start` (on top of [`OWNED`]).
+pub fn start_values(start: Start) -> Vec<(&'static str, Value<'static>)> {
+    let mut values = OWNED.to_vec();
+    match start {
+        Start::FeralWindow { restore: false } => {}
+        Start::FeralWindow { restore: true } => {
+            values.push(("GameOptionsDialogShouldShow", Value::Integer(1)));
+        }
+        Start::Direct { width, height } => values.extend([
+            ("GameOptionsDialogShown", Value::Integer(1)),
+            ("GameOptionsDialogShouldShow", Value::Integer(0)),
+            ("ScreenW", Value::Integer(width.into())),
+            ("ScreenH", Value::Integer(height.into())),
+            ("CrashCounter", Value::Integer(0)),
+        ]),
+    }
+    values
+}
+
+/// The file's new text for `start`: the values set in `existing`, or a
+/// seeded file when there is none.
+pub fn configure(existing: Option<&str>, start: Start) -> Result<String, String> {
+    let values = start_values(start);
     match existing {
-        Some(text) => set_values(text, SETUP, OWNED),
-        None => Ok(seed(SETUP, OWNED)),
+        Some(text) => set_values(text, SETUP, &values),
+        None => Ok(seed(SETUP, &values)),
     }
 }
 
@@ -315,14 +349,17 @@ mod tests {
 
     #[test]
     fn a_missing_value_is_added_with_its_siblings_indentation_and_nothing_else_moves() {
-        let out = configure(Some(GAME_WRITTEN)).unwrap();
+        let out = configure(Some(GAME_WRITTEN), Start::FeralWindow { restore: false }).unwrap();
         let expected = GAME_WRITTEN.replace(
             "&amp;c=2</value>\n                    </key>",
             "&amp;c=2</value>\n                        <value name=\"SeenSpecificationAlertUUIDLnxDistributionUnsupported\" type=\"integer\">1</value>\n                    </key>",
         );
         assert_eq!(out, expected);
         // A second run changes nothing.
-        assert_eq!(configure(Some(&out)).unwrap(), out);
+        assert_eq!(
+            configure(Some(&out), Start::FeralWindow { restore: false }).unwrap(),
+            out
+        );
     }
 
     #[test]
@@ -375,7 +412,7 @@ mod tests {
 
     #[test]
     fn a_seeded_file_reads_back_as_the_same_values() {
-        let seeded = configure(None).unwrap();
+        let seeded = configure(None, Start::FeralWindow { restore: false }).unwrap();
         assert!(seeded.starts_with("<?xml"));
         assert_eq!(set_values(&seeded, SETUP, OWNED).unwrap(), seeded);
         assert!(seeded.contains("<key name=\"Feral Interactive\">"));
@@ -385,5 +422,75 @@ mod tests {
     fn a_broken_file_is_refused_not_guessed() {
         assert!(set_values("not xml at all", SETUP, OWNED).is_err());
         assert!(set_values("<registry><key name=\"a\"></registry>", SETUP, OWNED).is_err());
+    }
+
+    fn value_of(text: &str, name: &str) -> Option<String> {
+        let start = text.find(&format!("<value name=\"{name}\""))?;
+        let rest = &text[start..];
+        let open = rest.find('>')? + 1;
+        let close = rest.find("</value>")?;
+        Some(rest[open..close].to_owned())
+    }
+
+    #[test]
+    fn a_direct_start_skips_the_pre_game_window_at_the_chosen_size() {
+        let crashed = GAME_WRITTEN.replace(
+            "\"CrashCounter\" type=\"integer\">0<",
+            "\"CrashCounter\" type=\"integer\">3<",
+        );
+        let out = configure(
+            Some(&crashed),
+            Start::Direct {
+                width: 2560,
+                height: 1440,
+            },
+        )
+        .unwrap();
+        for (name, want) in [
+            ("GameOptionsDialogShown", "1"),
+            ("GameOptionsDialogShouldShow", "0"),
+            ("ScreenW", "2560"),
+            ("ScreenH", "1440"),
+            ("CrashCounter", "0"),
+            ("SeenSpecificationAlertUUIDLnxDistributionUnsupported", "1"),
+            // The player's own values stay.
+            ("FullScreen", "1"),
+        ] {
+            assert_eq!(value_of(&out, name).as_deref(), Some(want), "{name}");
+        }
+        // The values are set once, not added again.
+        let again = configure(
+            Some(&out),
+            Start::Direct {
+                width: 2560,
+                height: 1440,
+            },
+        )
+        .unwrap();
+        assert_eq!(again, out);
+    }
+
+    #[test]
+    fn going_back_to_the_original_look_brings_the_pre_game_window_back_once() {
+        let direct = configure(
+            None,
+            Start::Direct {
+                width: 1280,
+                height: 800,
+            },
+        )
+        .unwrap();
+        let back = configure(Some(&direct), Start::FeralWindow { restore: true }).unwrap();
+        assert_eq!(
+            value_of(&back, "GameOptionsDialogShouldShow").as_deref(),
+            Some("1")
+        );
+        // Without a restore, Original leaves the player's choice in the window alone.
+        let theirs = back.replace(
+            "\"GameOptionsDialogShouldShow\" type=\"integer\">1<",
+            "\"GameOptionsDialogShouldShow\" type=\"integer\">0<",
+        );
+        let kept = configure(Some(&theirs), Start::FeralWindow { restore: false }).unwrap();
+        assert_eq!(kept, theirs);
     }
 }

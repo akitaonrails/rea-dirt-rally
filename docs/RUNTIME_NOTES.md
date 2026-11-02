@@ -77,3 +77,18 @@ in place (read-only).
   `SeenSpecificationAlertUUIDLnxDistributionUnsupported=1` in `Setup`
   (`prefs::configure(None)`): the game accepts it, fills in the rest (86
   lines) and keeps the value; no unsupported-distro alert.
+
+## 2026-11-02: skipping Feral's pre-game window
+
+- Decompiled the decision (`0x482f10`, REA/Ghidra): the window is skipped
+  when the command line holds `no-feral-options`, or when
+  `GameOptionsDialogShown` is set, `GameOptionsDialogShouldShow` is 0 and
+  nothing forces it (`GameOptionsDialogForceDialog`, a crash count).
+- Skipped with `ScreenW`/`ScreenH` still 0: the game crashes in `WinMain`
+  (null read at `0x175d7e4`). With `ScreenW=1920`, `ScreenH=1080`,
+  `GameOptionsDialogShown=1`, `GameOptionsDialogShouldShow=0`,
+  `CrashCounter=0`: no window, the game goes straight to its intro.
+- `gfxconfig_default_preset_name=ultra` with no hardware settings file yet:
+  the game writes its Ultra preset itself (3072 shadows, textures 3, 4×MSAA).
+  Not wired to an option yet.
+- Pending: the launcher binary doing this end to end (the next run).

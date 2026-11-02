@@ -1,6 +1,6 @@
 //! The command line end to end: every flag, `--help`, bad values and their
 //! messages, `--check`; on Windows (and under `sdk/scripts/wine-test`) the
-//! real DiRTRallyLauncher.exe too.
+//! real DiRTRallyLauncher program too (Linux), isolated in a scratch HOME.
 
 use std::path::{Path, PathBuf};
 
@@ -44,7 +44,7 @@ fn modes_follow_the_family_flags() {
     );
     assert_eq!(mode(&["--no-window"]), Mode::Play);
     assert_eq!(
-        mode(&["--vsync", "off"]),
+        mode(&["--resolution", "fullscreen"]),
         Mode::Play,
         "an option flag plays"
     );
@@ -83,18 +83,14 @@ fn every_option_has_a_working_flag() {
     let flags = parse(&["--look", "original", "--resolution", "800X600"])
         .unwrap()
         .flags;
-    assert_eq!(
-        flags.picture(None).resolution,
-        Some(Resolution::Size(800, 600))
-    );
+    assert_eq!(flags.picture().resolution, Some(Resolution::Size(800, 600)));
 }
 
 #[test]
 fn bad_command_lines_say_what_is_wrong() {
     let message = |args: &[&str]| parse(args).unwrap_err();
-    assert!(message(&["--vsync", "maybe"]).contains("--vsync needs on or off, not maybe"));
     assert!(message(&["--look", "shiny"]).contains("original, recommended or steam_deck"));
-    assert!(message(&["--resolution", "10x10"]).contains("WIDTHxHEIGHT or original"));
+    assert!(message(&["--resolution", "10x10"]).contains("WIDTHxHEIGHT"));
     assert!(message(&["--resolution"]).contains("--resolution needs a value"));
     assert!(message(&["--frobnicate"]).contains("unknown argument --frobnicate"));
     assert!(message(&["--frobnicate"]).contains("--help"));
@@ -107,7 +103,7 @@ fn help_lists_every_option_and_switch() {
     for switch in config::SWITCHES.iter().chain(&["--help"]) {
         assert!(usage.contains(switch), "{switch}");
     }
-    assert!(usage.contains("--vsync on|off"));
+    assert!(usage.contains("--resolution"));
     assert!(usage.contains("--look original|recommended|steam_deck"));
 }
 
@@ -134,20 +130,24 @@ fn check_needs_a_game_folder_with_a_known_edition() {
     );
 }
 
-/// The real program, as a player's terminal or the Linux helper runs it.
-#[cfg(windows)]
+/// The real program, as a player's terminal or the Linux helper runs it,
+/// with HOME and the XDG folders in a scratch folder.
+#[cfg(unix)]
 mod program {
     use super::*;
     use std::process::{Command, Output};
 
     fn run(name: &str, args: &[&str]) -> (Output, PathBuf) {
-        let home = scratch(name).join("AppData");
+        let home = scratch(name).join("home");
         let output = Command::new(env!("CARGO_BIN_EXE_DiRTRallyLauncher"))
             .args(args)
-            .env("LOCALAPPDATA", &home)
+            .env("HOME", &home)
+            .env("XDG_CONFIG_HOME", home.join(".config"))
+            .env("XDG_DATA_HOME", home.join(".local/share"))
+            .env_remove("DIRTRALLY_GAME_LIBS")
             .output()
             .unwrap();
-        (output, home.join("DiRTRallyLauncher").join("launcher.log"))
+        (output, home.join(".config/dirtrally-launcher/launcher.log"))
     }
 
     fn text(bytes: &[u8]) -> String {
@@ -158,25 +158,22 @@ mod program {
     fn help_goes_to_the_terminal() {
         let (output, _) = run("help", &["--help"]);
         assert_eq!(output.status.code(), Some(cli::OK));
-        assert!(text(&output.stdout).contains("--vsync on|off"));
+        assert!(text(&output.stdout).contains("--look original|recommended|steam_deck"));
     }
 
     #[test]
     fn a_bad_flag_exits_2_with_its_message() {
-        let (output, log) = run("bad", &["--vsync", "maybe"]);
+        let (output, log) = run("bad", &["--look", "shiny"]);
         assert_eq!(output.status.code(), Some(cli::USAGE_ERROR));
-        assert!(text(&output.stderr).contains("--vsync needs on or off"));
-        assert!(
-            std::fs::read_to_string(log)
-                .unwrap()
-                .contains("--vsync needs on or off")
-        );
+        assert!(text(&output.stderr).contains("original, recommended or steam_deck"));
+        assert!(std::fs::read_to_string(log).unwrap().contains("--look"));
     }
 
     #[test]
     fn check_refuses_an_unknown_edition_with_its_digest() {
         let dir = scratch("unknown-game");
-        std::fs::write(dir.join("drt.exe"), b"some other build").unwrap();
+        std::fs::create_dir_all(dir.join("bin")).unwrap();
+        std::fs::write(dir.join("bin/DirtRally"), b"some other build").unwrap();
         let game = dir.display().to_string();
         let (output, log) = run("unknown", &["--check", "--game", &game]);
         assert_eq!(output.status.code(), Some(cli::REFUSED));
@@ -188,15 +185,10 @@ mod program {
             "{log}"
         );
     }
-}
 
-#[cfg(not(windows))]
-#[test]
-fn the_program_says_it_is_for_windows() {
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_DiRTRallyLauncher"))
-        .arg("--help")
-        .output()
-        .unwrap();
-    assert_eq!(output.status.code(), Some(cli::USAGE_ERROR));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("Windows program"));
+    #[test]
+    fn settings_only_says_no_window_is_possible_yet() {
+        let (output, _) = run("settings", &["--settings", "--linux"]);
+        assert_eq!(output.status.code(), Some(cli::WINDOW_UNAVAILABLE));
+    }
 }

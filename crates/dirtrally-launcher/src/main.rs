@@ -10,12 +10,178 @@ fn main() {
     std::process::exit(app::run());
 }
 
-#[cfg(not(windows))]
+#[cfg(unix)]
 fn main() {
-    eprintln!(
-        "DiRTRallyLauncher.exe is a Windows program; on Linux run it with Proton, Wine or linux/dirtrally-play."
-    );
-    std::process::exit(dirtrally_launcher::cli::USAGE_ERROR);
+    std::process::exit(linux::run());
+}
+
+/// The Linux launcher: DiRT Rally's supported edition is Feral's native
+/// port, so this is the program players run (through linux/dirtrally-play
+/// or the AppImage). Each step is a library call; this only wires them.
+#[cfg(unix)]
+mod linux {
+    use std::path::PathBuf;
+    use std::process::Command;
+
+    use dirtrally_launcher::cli::{self, Invocation, Mode};
+    use dirtrally_launcher::{config, plan, runtime, start};
+    use rea_launcher::log::Log;
+    use rea_launcher::{cfg, fsx};
+
+    fn home() -> PathBuf {
+        std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .unwrap_or_default()
+    }
+
+    fn places() -> start::Places {
+        start::places(
+            &home(),
+            std::env::var_os("XDG_CONFIG_HOME"),
+            std::env::var_os("XDG_DATA_HOME"),
+        )
+    }
+
+    pub fn run() -> i32 {
+        let places = places();
+        let log = Log::new(places.config.join("launcher.log"));
+        log.line(concat!("DiRTRallyLauncher ", env!("CARGO_PKG_VERSION")));
+        let invocation = match cli::parse(std::env::args().skip(1)) {
+            Ok(invocation) => invocation,
+            Err(error) => {
+                log.line(&format!("error: {error}"));
+                eprintln!("{error}");
+                return cli::USAGE_ERROR;
+            }
+        };
+        match run_mode(&log, &places, invocation) {
+            Ok(code) => code,
+            Err(error) => {
+                log.line(&format!("error: {error}"));
+                eprintln!("{error}");
+                cli::REFUSED
+            }
+        }
+    }
+
+    fn run_mode(log: &Log, places: &start::Places, invocation: Invocation) -> Result<i32, String> {
+        if invocation.mode == Mode::Help {
+            println!("{}", config::usage());
+            return Ok(cli::OK);
+        }
+        // The settings window comes with the window work (docs/RESEARCH.md);
+        // until then the helper plays with the saved settings.
+        if let Mode::Window {
+            settings_only: true,
+        } = invocation.mode
+        {
+            log.line("settings window: not available on Linux yet");
+            return Ok(cli::WINDOW_UNAVAILABLE);
+        }
+        let path = places.config.join(config::FILE_NAME);
+        let existing = cfg::read_file(&path)
+            .map_err(|error| format!("Cannot read {}: {error}", path.display()))?;
+        let first_run = existing.is_none();
+        let text = existing.unwrap_or_else(|| config::first_run_text(None));
+        let (saved, warnings) = config::parse_file(&text);
+        for warning in &warnings {
+            log.line(&format!("warning: {warning}"));
+        }
+        let settings = saved.clone().merged(invocation.flags);
+        let cwd = std::env::current_dir().unwrap_or_default();
+        let (game, found) = cli::check(&settings, &cwd)?;
+        log.line(&format!(
+            "game: {} ({}, {})",
+            found.root.display(),
+            found.edition.name,
+            found.exe.display()
+        ));
+        let exe = std::env::current_exe().map_err(|error| error.to_string())?;
+        let package = start::package(&exe, std::env::var_os(start::GAME_LIBS_ENV));
+        start::check_package(&package)?;
+        if invocation.mode == Mode::Check {
+            println!("{}", cli::check_report(&found));
+            return Ok(cli::OK);
+        }
+
+        let runtime_dir = settings
+            .runtime
+            .clone()
+            .unwrap_or_else(|| places.runtime.clone());
+        let report = runtime::prepare(&found.root, &runtime_dir)?;
+        for warning in &report.warnings {
+            log.line(&format!("warning: {warning}"));
+        }
+        log.line(&format!(
+            "runtime: {} ({} brought, {} linked)",
+            runtime_dir.display(),
+            report.brought,
+            report.linked
+        ));
+        let screen = screen_size();
+        let restore = places.config.join(start::HIDDEN_MARKER).is_file();
+        let how = start::start_for(settings.picture().resolution, screen, restore);
+        log.line(&format!(
+            "picture: {}; screen {}x{}; start {how:?}",
+            settings.picture().describe(),
+            screen.0,
+            screen.1
+        ));
+        let prefs = start::write_prefs(&home(), &places.config, how)?;
+        log.line(&format!("preferences: {}", prefs.display()));
+
+        if first_run || saved.game.as_ref() != Some(&game) {
+            let text = config::set(&text, "game", &game.display().to_string());
+            if let Some(dir) = path.parent() {
+                std::fs::create_dir_all(dir)
+                    .map_err(|error| format!("Cannot create {}: {error}", dir.display()))?;
+            }
+            fsx::write_atomic(&path, text)
+                .map_err(|error| format!("Cannot save {}: {error}", path.display()))?;
+        }
+
+        let launch = plan::launch(&runtime_dir, &package, &plan::host_from_env())?;
+        log.line(&format!(
+            "start: {} in {}",
+            launch.program.display(),
+            launch.cwd.display()
+        ));
+        for (key, value) in &launch.set {
+            log.line(&format!("env: {key}={}", value.to_string_lossy()));
+        }
+        let status = spawn(&launch)?;
+        log.line(&format!("game exited with {status}"));
+        Ok(status.code().unwrap_or(cli::REFUSED))
+    }
+
+    fn spawn(launch: &plan::Launch) -> Result<std::process::ExitStatus, String> {
+        let mut command = Command::new(&launch.program);
+        command.current_dir(&launch.cwd).args(&launch.args);
+        for key in &launch.unset {
+            command.env_remove(key);
+        }
+        for (key, value) in &launch.set {
+            command.env(key, value);
+        }
+        command
+            .status()
+            .map_err(|error| format!("Cannot start {}: {error}", launch.program.display()))
+    }
+
+    /// The size `fullscreen` means: `DIRTRALLY_SCREEN` (WIDTHxHEIGHT, as the
+    /// Linux helper takes it), else the X screen (inside gamescope, the
+    /// game's size), else 1920x1080.
+    fn screen_size() -> (u32, u32) {
+        let from_env = std::env::var("DIRTRALLY_SCREEN")
+            .ok()
+            .and_then(|text| cfg::parse_size(&text, config::MIN_SIZE, config::MAX_SIZE));
+        from_env
+            .or_else(|| {
+                let out = Command::new("xrandr").arg("--current").output().ok()?;
+                start::screen_from_xrandr(&String::from_utf8_lossy(&out.stdout))
+            })
+            .unwrap_or((1920, 1080))
+    }
 }
 
 #[cfg(windows)]
@@ -182,7 +348,7 @@ mod app {
         // Phase 4 of the playbook: components, the game's own configuration
         // (generated from the picture below), patches. Log every decision.
         out.log
-            .line(&format!("picture: {}", settings.picture(screen).describe()));
+            .line(&format!("picture: {}", settings.picture().describe()));
 
         if first_run || saved.game.as_ref() != Some(&game) {
             let text = config::set(&text, "game", &game.display().to_string());

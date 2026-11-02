@@ -1,19 +1,25 @@
 #!/bin/sh
-# Plays DiRT Rally on Linux through Wine and gamescope, using the
+# Plays DiRT Rally (Feral's native Linux port) through gamescope, using the
 # rea-launcher-sdk play library (sdk/rea-play.sh; see its shell/README.md).
 #
 #   dirtrally-play             show the settings window, then start the game
 #   dirtrally-play --play      start with the saved settings (no window)
-#   dirtrally-play stop        end the game session and its private Wine prefix
+#   dirtrally-play stop        end the game session
 #   dirtrally-play status      running or idle
+#   dirtrally-play <other>     passed to DiRTRallyLauncher (--check, --help, ...)
+#
+# Every launch waits for the game to end. The game runs in its own session,
+# recorded with its start time, so "stop" ends exactly that session
+# (gamescope, the launcher, the game).
 #
 # Optional environment:
-#   DIRTRALLY_PREFIX    Wine prefix (default ~/.local/share/dirtrally-launcher/prefix)
-#   DIRTRALLY_LAUNCHER  DiRTRallyLauncher.exe (default: next to this script, or one up)
-#   DIRTRALLY_RUN       a wrapper that runs wine and gamescope, e.g.
-#                      "distrobox enter gaming --" when they live in a container
-#   DIRTRALLY_WAIT      set by the AppImage (every launch waits anyway)
-#   DIRTRALLY_GPU       GPU environment to use instead of the detected one
+#   DIRTRALLY_LAUNCHER   the DiRTRallyLauncher program (default: next to this
+#                        script, one up, or a development build)
+#   DIRTRALLY_GAME_LIBS  the launcher's game-libs folder (development builds)
+#   DIRTRALLY_WAIT       accepted for AppImage compatibility; every launch waits
+#   DIRTRALLY_GPU        GPU environment to use instead of the detected one
+#   DIRTRALLY_SCREEN     WIDTHxHEIGHT for gamescope (default: the current mode
+#                        from xrandr, else 1920x1080)
 set -u
 
 # --- the library: next to this script in a package, else the vendored copy --
@@ -35,29 +41,19 @@ REA_HERE=$_here REA_NAME=dirtrally-play
 
 # --- configuration (after sourcing: inherited REA_* values are dropped, so
 # only the player-facing DIRTRALLY_* names below reach the library) ----------
-REA_APP=dirtrally-launcher                 # ~/.config/dirtrally-launcher, the prefix name
-REA_EXE_NAME=DiRTRallyLauncher.exe
+REA_MODE=native
+REA_APP=dirtrally-launcher                 # ~/.config/dirtrally-launcher
+REA_EXE_NAME=DiRTRallyLauncher
 REA_EXE_HINT=DIRTRALLY_LAUNCHER
 REA_EXE=${DIRTRALLY_LAUNCHER:-}
-REA_PREFIX=${DIRTRALLY_PREFIX:-}
-REA_RUN=${DIRTRALLY_RUN:-}
+REA_EXE_SEARCH="../target/release/DiRTRallyLauncher ../target/debug/DiRTRallyLauncher"
+REA_STATE_BASE=${XDG_CONFIG_HOME:-$HOME/.config}
 REA_WAIT=${DIRTRALLY_WAIT:-}
 [ -n "${DIRTRALLY_GPU+set}" ] && REA_GPU=$DIRTRALLY_GPU   # DIRTRALLY_GPU= for no GPU choice
-REA_CFG_APPDATA=DiRTRallyLauncher       # AppData\Local\DiRTRallyLauncher\launcher.cfg
-REA_WINEDBG_OFF=1                     # a fault ends the game, no hidden debugger
-# Game choices to make once the game is known (sdk shell/README.md, "Game
-# differences kept as settings"):
-#   REA_ORIGINAL_SIZE=640x480         what resolution = original means
-#   REA_DLL_OVERRIDES='d3d9=n,b'      the game's WINEDLLOVERRIDES (DXVK, ...)
-#   REA_GAME_PROCS='drt.exe'       when the launcher returns before the game
-#                                     (at most 15 characters per name)
-
-# --- game hooks --------------------------------------------------------------
-
-# Once per prefix: no crash dialog.
-rea_hook_before_start() {
-  rea_wine_no_crash_dialog
-}
+# gamescope: the game runs fullscreen at the screen's size.
+REA_FULLSCREEN_SIZE=screen
+REA_SCREEN=${DIRTRALLY_SCREEN:-}
+REA_FLAG_SWITCHES="--no-window --settings --linux --check --help"
 
 rea_init || exit 1
 # Tests load the configuration and hooks without running anything.

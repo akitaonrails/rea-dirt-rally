@@ -17,6 +17,7 @@ pub mod form;
 pub mod plan;
 pub mod prefs;
 pub mod runtime;
+pub mod start;
 
 #[cfg(any(windows, test))]
 pub mod palette;

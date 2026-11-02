@@ -1,16 +1,17 @@
 //! `launcher.cfg`, the command line and `--help`, from one option table
 //! (`rea_launcher::cfg::spec`, docs/STANDARDS.md "Settings window and CLI").
 //!
-//! [`OPTIONS`] names every setting once: its key, its flag (`--vsync` for
-//! `vsync`), the values it takes, and the label and description the window
-//! and `--help` show. The parser, `--help`, the first-run template and the
-//! window rows all come from it, and the window's parity test fails when a
-//! row has no control or a control has no row.
+//! [`OPTIONS`] names every setting once: its key, its flag, the values it
+//! takes, and the label and description the window and `--help` show. The
+//! parser, `--help`, the first-run template and the window rows all come
+//! from it, and the window's parity test fails when a row has no control
+//! or a control has no row.
 //!
-//! The options below are EXAMPLES that show the wiring (a look, a size, a
-//! toggle). Replace them with options whose effect was seen in the real
-//! game (STANDARDS "No unverified options"), and give each one an
-//! end-to-end test: window control → key → the game file it changes.
+//! Every option here was seen working in the real game
+//! (docs/RUNTIME_NOTES.md): `resolution` is the size the game opens at
+//! (Feral's `ScreenW`/`ScreenH`) and the gamescope size the Linux helper
+//! uses; `original` keeps Feral's own pre-game window, where the game
+//! shipped its display choices.
 
 use std::path::PathBuf;
 
@@ -19,11 +20,10 @@ use rea_launcher::cfg::{
 };
 use rea_launcher::display;
 
-/// The settings file, next to the exe (portable) or in the launcher's
-/// AppData folder.
+/// The settings file in the launcher's config folder.
 pub const FILE_NAME: &str = "launcher.cfg";
 
-/// Flags spell keys with hyphens: `--display-mode` is `display_mode`.
+/// Flags spell keys with hyphens.
 pub const STYLE: KeyStyle = KeyStyle::Underscore;
 
 /// The launcher's own switches: they take no value and never reach
@@ -47,53 +47,50 @@ pub const OPTIONS: &[OptionSpec] = &[
         "game",
         Kind::Path,
         "Game folder",
-        "The folder with your installed DiRT Rally (drt.exe). It is only read, never changed.",
+        "The folder with your DiRT Rally for Linux (it holds bin/DirtRally). It is only \
+         read, never changed.",
     ),
     OptionSpec::new(
         "look",
         Kind::Choice(LOOKS),
         "Look",
-        "Sets the picture options at once: as the game shipped, recommended for your \
-         screen, or for the Steam Deck. Options set after it win.",
+        "Original opens the game's own pre-game window first, as it shipped. Recommended \
+         starts the race game straight away at your screen's size. Steam Deck does the \
+         same at 1280x800.",
     ),
     OptionSpec::new(
         "resolution",
         Kind::Size {
             min: MIN_SIZE,
             max: MAX_SIZE,
-            aliases: cfg::ORIGINAL,
+            aliases: cfg::ORIGINAL_OR_FULLSCREEN,
         },
         "Resolution",
-        "The game's screen size, or original for the size it shipped with.",
+        "The size the game opens at: fullscreen for your screen's size, a size such as \
+         2560x1440, or original to choose it in the game's own pre-game window.",
     )
-    .with_example("1920x1080"),
-    OptionSpec::new(
-        "vsync",
-        Kind::Toggle,
-        "VSync",
-        "Waits for the screen's refresh: no tearing, slightly more input delay.",
-    ),
+    .with_example("fullscreen"),
     OptionSpec::new(
         "runtime",
         Kind::Path,
         "Runtime folder",
-        "Where the launcher keeps its private copy of the game. Default: a runtime \
-         folder beside launcher.log.",
+        "Where the launcher keeps its private copy of the game. Default: \
+         ~/.local/share/dirtrally-launcher/runtime.",
     )
     .launcher_only(),
 ];
 
 /// Comment lines at the top of a new `launcher.cfg`.
-const HEADING: &str = "Settings for DiRTRallyLauncher.exe (DiRT Rally).\n\
+const HEADING: &str = "Settings for DiRTRallyLauncher (DiRT Rally).\n\
     Every key is also a command-line flag: resolution = 1920x1080 is --resolution 1920x1080.\n\
     A key left commented out keeps the game's own value.";
 
 /// A look: a named set of option values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Look {
-    /// The game as it shipped.
+    /// The game as it shipped: Feral's pre-game window first.
     Original,
-    /// The launcher's pick for the player's screen.
+    /// Straight into the game at the screen's size.
     Recommended,
     SteamDeck,
 }
@@ -131,15 +128,11 @@ impl Look {
         }
     }
 
-    /// The look's values on `screen`. EXAMPLE values: each one must be
-    /// verified in the real game before it ships.
-    pub fn picture(self, screen: Option<(u32, u32)>) -> Picture {
+    /// The look's values.
+    pub fn picture(self) -> Picture {
         let resolution = match self {
             Look::Original => Resolution::Original,
-            Look::Recommended => {
-                let (w, h) = screen.and_then(display::landscape).unwrap_or((1920, 1080));
-                Resolution::Size(w, h)
-            }
+            Look::Recommended => Resolution::Fullscreen,
             Look::SteamDeck => {
                 let (w, h) = display::STEAM_DECK_SCREEN;
                 Resolution::Size(w, h)
@@ -147,7 +140,6 @@ impl Look {
         };
         Picture {
             resolution: Some(resolution),
-            vsync: Some(true),
         }
     }
 }
@@ -156,16 +148,12 @@ impl Look {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Picture {
     pub resolution: Option<Resolution>,
-    pub vsync: Option<bool>,
 }
 
 impl Picture {
     /// The values as `(key, launcher.cfg text)`, for the window and the log.
-    pub fn values(&self) -> [(&'static str, Option<String>); 2] {
-        [
-            ("resolution", self.resolution.map(|r| r.to_string())),
-            ("vsync", self.vsync.map(|on| cfg::on_off(on).to_owned())),
-        ]
+    pub fn values(&self) -> [(&'static str, Option<String>); 1] {
+        [("resolution", self.resolution.map(|r| r.to_string()))]
     }
 
     /// One line for `launcher.log`.
@@ -184,7 +172,6 @@ pub struct Settings {
     pub game: Option<PathBuf>,
     pub look: Option<Look>,
     pub resolution: Option<Resolution>,
-    pub vsync: Option<bool>,
     pub runtime: Option<PathBuf>,
 }
 
@@ -200,10 +187,8 @@ impl Settings {
                 // A look sets all of its values; options after it win.
                 self.look = Some(look);
                 self.resolution = None;
-                self.vsync = None;
             }
             ("resolution", Value::Size(resolution)) => self.resolution = Some(resolution),
-            ("vsync", Value::Toggle(on)) => self.vsync = Some(on),
             _ => return Err(Rejected::Unknown),
         }
         Ok(())
@@ -215,25 +200,19 @@ impl Settings {
         if flags.look.is_some() {
             self.look = flags.look;
             self.resolution = None;
-            self.vsync = None;
         }
         self.game = flags.game.or(self.game);
         self.runtime = flags.runtime.or(self.runtime);
         self.resolution = flags.resolution.or(self.resolution);
-        self.vsync = flags.vsync.or(self.vsync);
         self
     }
 
     /// The picture for this run: the look's values, then the options set
     /// on their own.
-    pub fn picture(&self, screen: Option<(u32, u32)>) -> Picture {
-        let base = self
-            .look
-            .map(|look| look.picture(screen))
-            .unwrap_or_default();
+    pub fn picture(&self) -> Picture {
+        let base = self.look.map(Look::picture).unwrap_or_default();
         Picture {
             resolution: self.resolution.or(base.resolution),
-            vsync: self.vsync.or(base.vsync),
         }
     }
 }
@@ -271,7 +250,7 @@ pub fn template() -> String {
 pub fn first_run_text(screen: Option<(u32, u32)>) -> String {
     let look = Look::recommended(screen);
     let mut text = set(&template(), "look", look.key());
-    for (key, value) in look.picture(screen).values() {
+    for (key, value) in look.picture().values() {
         if let Some(value) = value {
             text = set(&text, key, &value);
         }
@@ -290,9 +269,9 @@ pub fn set(text: &str, key: &str, value: &str) -> String {
 /// `--help`.
 pub fn usage() -> String {
     format!(
-        "DiRTRallyLauncher.exe {version}: plays your own copy of DiRT Rally on modern Windows and Linux.\n\
+        "DiRTRallyLauncher {version}: plays your own copy of DiRT Rally for Linux on a modern system.\n\
          \n\
-         Usage: DiRTRallyLauncher.exe [options]\n\
+         Usage: DiRTRallyLauncher [options]\n\
          \n\
          Without options the settings window opens; Play saves them and starts the game.\n\
          \n\
@@ -327,8 +306,7 @@ mod tests {
         let (settings, warnings) = parse_file(&first_run_text(Some((2560, 1440))));
         assert!(warnings.is_empty(), "{warnings:?}");
         assert_eq!(settings.look, Some(Look::Recommended));
-        assert_eq!(settings.resolution, Some(Resolution::Size(2560, 1440)));
-        assert_eq!(settings.vsync, Some(true));
+        assert_eq!(settings.resolution, Some(Resolution::Fullscreen));
         let deck = parse_file(&first_run_text(Some((800, 1280)))).0;
         assert_eq!(deck.look, Some(Look::SteamDeck));
         assert_eq!(deck.resolution, Some(Resolution::Size(1280, 800)));
@@ -336,40 +314,36 @@ mod tests {
 
     #[test]
     fn a_look_sets_its_values_and_later_options_win() {
-        let (settings, _) = parse_file("resolution = 800x600\nlook = original\nvsync = off\n");
+        let (settings, _) = parse_file("resolution = 800x600\nlook = original\n");
+        assert_eq!(settings.picture().resolution, Some(Resolution::Original));
+        let (settings, _) = parse_file("look = original\nresolution = 1280x720\n");
         assert_eq!(
-            settings.picture(None),
-            Picture {
-                resolution: Some(Resolution::Original),
-                vsync: Some(false),
-            }
+            settings.picture().resolution,
+            Some(Resolution::Size(1280, 720))
         );
-        let unset = Settings::default().picture(None);
+        let unset = Settings::default().picture();
         assert_eq!(unset, Picture::default(), "unset keeps the game's values");
     }
 
     #[test]
     fn flags_win_over_the_file_and_a_look_flag_replaces_its_values() {
-        let (file, _) = parse_file("game = C:\\Games\\Old\nresolution = 800x600\nvsync = on\n");
+        let (file, _) = parse_file("game = /games/Old\nresolution = 800x600\n");
         let (flags, _) = parse_args(["--look".into(), "steam_deck".into()]).unwrap();
         let merged = file.clone().merged(flags);
         assert_eq!(merged.game, file.game);
         assert_eq!(
-            merged.picture(None).resolution,
+            merged.picture().resolution,
             Some(Resolution::Size(1280, 800))
         );
-        let (flags, _) = parse_args(["--vsync".into(), "off".into()]).unwrap();
-        let merged = file.merged(flags);
-        assert_eq!(merged.vsync, Some(false));
-        assert_eq!(merged.resolution, Some(Resolution::Size(800, 600)));
+        let (flags, _) = parse_args(["--resolution".into(), "fullscreen".into()]).unwrap();
+        assert_eq!(file.merged(flags).resolution, Some(Resolution::Fullscreen));
     }
 
     #[test]
     fn bad_lines_are_reported_and_kept() {
-        let (settings, warnings) = parse_file("vsync = maybe\nfps = 60\nresolution = 1280x720\n");
-        assert_eq!(settings.resolution, Some(Resolution::Size(1280, 720)));
+        let (settings, warnings) = parse_file("resolution = huge\nfps = 60\nlook = original\n");
+        assert_eq!(settings.look, Some(Look::Original));
         assert_eq!(warnings.len(), 2, "{warnings:?}");
-        assert!(warnings[0].contains("on or off"), "{warnings:?}");
         assert!(warnings[1].contains("unknown setting"), "{warnings:?}");
     }
 }
