@@ -38,3 +38,7 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
 - Linux package: the launcher, its exec-read library and the legacy
   libraries from pinned Steam scout packages (`game-libs/`), kept off the
   launcher's own library path.
+- `DIRTRALLY_RUN`: run gamescope and the game through a wrapper such as
+  `distrobox enter gaming --`, keeping the player's HOME and XDG folders.
+  Without gamescope, a multi-monitor desktop can put the game on the wrong
+  screen (SDL 2.0.5 uses display 0).

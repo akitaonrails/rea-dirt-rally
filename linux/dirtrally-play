@@ -16,6 +16,10 @@
 #   DIRTRALLY_LAUNCHER   the DiRTRallyLauncher program (default: next to this
 #                        script, one up, or a development build)
 #   DIRTRALLY_GAME_LIBS  the launcher's game-libs folder (development builds)
+#   DIRTRALLY_RUN        a wrapper that runs gamescope and the game, e.g.
+#                        "distrobox enter gaming --" when gamescope lives in a
+#                        container (HOME and the XDG folders are kept); paths
+#                        with spaces are not supported here
 #   DIRTRALLY_WAIT       accepted for AppImage compatibility; every launch waits
 #   DIRTRALLY_GPU        GPU environment to use instead of the detected one
 #   DIRTRALLY_SCREEN     WIDTHxHEIGHT for gamescope (default: the current mode
@@ -49,6 +53,14 @@ REA_EXE=${DIRTRALLY_LAUNCHER:-}
 REA_EXE_SEARCH="../target/release/DiRTRallyLauncher ../target/debug/DiRTRallyLauncher"
 REA_STATE_BASE=${XDG_CONFIG_HOME:-$HOME/.config}
 REA_WAIT=${DIRTRALLY_WAIT:-}
+# A wrapper for gamescope and the game, e.g. "distrobox enter gaming --" when
+# gamescope lives in a container. A container has a HOME of its own, so the
+# player's folders go with it: launcher.cfg, the private copy and the game's
+# saves stay where they are without the wrapper.
+REA_RUN=${DIRTRALLY_RUN:-}
+if [ -n "$REA_RUN" ]; then
+  REA_RUN="$REA_RUN env HOME=$HOME XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config} XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}"
+fi
 [ -n "${DIRTRALLY_GPU+set}" ] && REA_GPU=$DIRTRALLY_GPU   # DIRTRALLY_GPU= for no GPU choice
 # gamescope: the game runs fullscreen at the screen's size.
 REA_FULLSCREEN_SIZE=screen

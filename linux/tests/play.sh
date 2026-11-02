@@ -59,6 +59,24 @@ for layout in repo pkg; do
   check "[$layout] stop" "$(sh "$play" stop)" stopped
 done
 
+echo "# DIRTRALLY_RUN: a container wrapper keeps the player's folders"
+cat > "$T/box" <<'BOX'
+#!/bin/sh
+# Records the whole command, then runs it (as distrobox enter ... -- would).
+echo "$*" >> "$T/boxed"
+case "$*" in *"command -v gamescope"*) exit 1 ;; esac
+exec "$@"
+BOX
+chmod +x "$T/box"
+rm -f "$T/ran" "$T/boxed"
+DIRTRALLY_RUN="$T/box" sh "$T/pkg/linux/dirtrally-play" --play > "$T/out" 2>&1
+boxed=$(cat "$T/boxed" 2>/dev/null)
+contains "the game runs through the wrapper" "$boxed" "DiRTRallyLauncher --no-window"
+contains "with the player's HOME" "$boxed" "env HOME=$HOME "
+contains "and their config folder" "$boxed" "XDG_CONFIG_HOME=$T/.config"
+contains "and their data folder" "$boxed" "XDG_DATA_HOME=$T/.local/share"
+contains "the launcher ran" "$(cat "$T/ran" 2>/dev/null)" "--no-window"
+
 echo "# tests source the script: REA_FUNCTIONS_ONLY=1 + REA_PLAY_HERE"
 got=$(REA_FUNCTIONS_ONLY=1 REA_PLAY_HERE=$T/repo/linux sh -c '
   . "$1"
