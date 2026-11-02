@@ -42,3 +42,7 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
   `distrobox enter gaming --`, keeping the player's HOME and XDG folders.
   Without gamescope, a multi-monitor desktop can put the game on the wrong
   screen (SDL 2.0.5 uses display 0).
+- Gamepads: every connected pad with the standard Linux layout (xpad and
+  others) gets an SDL 2.0.5 mapping in `SDL_GAMECONTROLLERCONFIG`, so the
+  game's 2016 SDL treats newer pads as game controllers; a player's own
+  mapping still wins.

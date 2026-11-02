@@ -119,3 +119,18 @@ in place (read-only).
   `-benchmark` stage rendered real 3D frames at 3840×2160.
 - Owner decision: graphics quality stays the game's (its own menu and
   first-boot preset); the launcher sets only the size. No 4K patch needed.
+
+## 2026-11-02: owner's session (desktop, gamescope from the gaming box)
+
+- Played through `DIRTRALLY_RUN="distrobox enter gaming --"`: gamescope on
+  the focused 4K monitor, gamepad mapped by hand in the game's menu, normal
+  play.
+- Without gamescope (host, no gamescope installed) the game went
+  fullscreen on the rotated monitor (DP-2 is Xwayland display 0).
+- After a restart the controls were back on the keyboard and the gamepad
+  needed mapping again. The profile itself loads (the game reads
+  `~/.local/share/Steam/ACTiVATED/310560/remote/savegame@profile#…`, where
+  the pre-activated copy keeps saves). The 8BitDo Ultimate 2 (2dc8:310b,
+  xpad) is unknown to SDL 2.0.5, so the game sees a plain joystick, not a
+  gamepad. Fix: SDL_GAMECONTROLLERCONFIG from sysfs (`pads.rs`). Pending:
+  the owner's check that the game now uses its gamepad preset on start.
