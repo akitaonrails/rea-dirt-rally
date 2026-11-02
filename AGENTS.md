@@ -82,6 +82,8 @@ entry, and every change that still needs a real-game check a line in
   libraries for the Linux port (see `docs/RESEARCH.md`).
 - **Patches:** none to game files. The Linux port gets a small LD_PRELOAD
   library of ours that makes execute-only mappings readable (PKU crash).
+- **Graphics:** the game decides its own quality (its menu, its first-boot
+  preset); the launcher sets only the size. 4K works natively (verified).
 - **Owner decisions:** (2026-11-02) the game is no longer sold, so the
   launcher accepts a **pre-activated** copy, identified by SHA-256, and runs
   it unchanged. It **never applies a crack** and never adds, replaces,
