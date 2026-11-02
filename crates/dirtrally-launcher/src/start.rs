@@ -154,15 +154,43 @@ pub fn write_prefs(home: &Path, config: &Path, start: prefs::Start) -> Result<Pa
     Ok(path)
 }
 
+/// The pads the launcher has seen, in `config`: Feral entries, so a pad
+/// that is asleep when the game starts (a wireless pad switched on later)
+/// is still listed. Deleting the file forgets them.
+pub const KNOWN_PADS: &str = "known-pads.json";
+
+/// The remembered pads plus the connected ones ([`pads::remember`]), saved
+/// back to [`KNOWN_PADS`] in `config` when something new was seen. A broken
+/// file counts as empty and is replaced.
+pub fn known_pads(
+    config: &Path,
+    connected: &[pads::Pad],
+) -> Result<Vec<serde_json::Value>, String> {
+    let path = config.join(KNOWN_PADS);
+    let known: Vec<serde_json::Value> = std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or_default();
+    let all = pads::remember(&known, connected);
+    if all != known {
+        std::fs::create_dir_all(config)
+            .map_err(|error| format!("Cannot create {}: {error}", config.display()))?;
+        let text = serde_json::to_string_pretty(&all).map_err(|error| error.to_string())?;
+        fsx::write_atomic(&path, format!("{text}\n"))
+            .map_err(|error| format!("Cannot save {}: {error}", path.display()))?;
+    }
+    Ok(all)
+}
+
 /// Writes Feral's controller list into `runtime`: the game's own
-/// `share/inputdevices.json` from `game` with an entry for each connected
-/// pad it does not list ([`pads::input_devices`]). Rebuilt at every start,
-/// so a pad that is gone is gone from the list too. Returns the names of
-/// the pads the list now holds that the game's own list did not.
+/// `share/inputdevices.json` from `game` with each of `entries` it does not
+/// list ([`pads::input_devices`]). Rebuilt at every start from the game's
+/// own file. Returns the names of the pads the list now holds that the
+/// game's own list did not.
 pub fn write_input_devices(
     game: &Path,
     runtime: &Path,
-    connected: &[pads::Pad],
+    entries: &[serde_json::Value],
 ) -> Result<Vec<String>, String> {
     let source = paths::find_ignoring_case(game, runtime::INPUT_DEVICES)
         .filter(|path| path.is_file())
@@ -175,7 +203,7 @@ pub fn write_input_devices(
         })?;
     let original = std::fs::read_to_string(&source)
         .map_err(|error| format!("Cannot read {}: {error}", source.display()))?;
-    let text = pads::input_devices(&original, connected)?;
+    let text = pads::input_devices(&original, entries)?;
     let target = paths::native(runtime, runtime::INPUT_DEVICES);
     if std::fs::read_to_string(&target).ok().as_deref() != Some(text.as_str()) {
         if let Some(dir) = target.parent() {
@@ -285,10 +313,14 @@ mod tests {
     }
 
     #[test]
-    fn a_new_pad_joins_feral_s_list_in_the_copy_and_leaves_with_the_pad() {
+    fn a_pad_seen_once_stays_in_feral_s_list_in_the_copy_even_when_asleep() {
         let root = std::env::temp_dir().join(format!("dirtrally-pads-copy-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
-        let (game, rt) = (root.join("Jogos d'Ação"), root.join("runtime"));
+        let (game, rt, config) = (
+            root.join("Jogos d'Ação"),
+            root.join("runtime"),
+            root.join("config"),
+        );
         fs::create_dir_all(game.join("share")).unwrap();
         let original = "[\n    {\n        \"Name\": \"X360 Controller\",\n        \"VendorID\": \"0x045e\",\n        \"ProductIDs\": [\"0x028e\"]\n    }\n]\n";
         fs::write(game.join("share/inputdevices.json"), original).unwrap();
@@ -301,7 +333,9 @@ mod tests {
             keys: "7cdb000000000000 0 0 0 0".into(),
             abs: "3003f".into(),
         };
-        let added = write_input_devices(&game, &rt, std::slice::from_ref(&pad)).unwrap();
+        // First start with the pad on: remembered and listed in the copy.
+        let known = known_pads(&config, std::slice::from_ref(&pad)).unwrap();
+        let added = write_input_devices(&game, &rt, &known).unwrap();
         assert_eq!(added, ["8BitDo Ultimate 2 Wireless Controller"]);
         let copy = fs::read_to_string(rt.join("share/inputdevices.json")).unwrap();
         assert!(
@@ -313,11 +347,28 @@ mod tests {
             fs::read_to_string(game.join("share/inputdevices.json")).unwrap(),
             original
         );
-        // Next start without the pad: the game's own list again.
-        assert!(write_input_devices(&game, &rt, &[]).unwrap().is_empty());
+        // Next start with the pad asleep: still listed, the same file.
+        let known = known_pads(&config, &[]).unwrap();
+        assert_eq!(write_input_devices(&game, &rt, &known).unwrap(), added);
+        assert_eq!(
+            fs::read_to_string(rt.join("share/inputdevices.json")).unwrap(),
+            copy
+        );
+        // Forgetting the pads (deleting the file) gives the game's own list.
+        fs::remove_file(config.join(KNOWN_PADS)).unwrap();
+        let known = known_pads(&config, &[]).unwrap();
+        assert!(write_input_devices(&game, &rt, &known).unwrap().is_empty());
         assert_eq!(
             fs::read_to_string(rt.join("share/inputdevices.json")).unwrap(),
             original
+        );
+        // A broken remembered file is replaced, not trusted.
+        fs::write(config.join(KNOWN_PADS), "not json").unwrap();
+        assert_eq!(
+            known_pads(&config, std::slice::from_ref(&pad))
+                .unwrap()
+                .len(),
+            1
         );
         fs::remove_dir_all(&root).unwrap();
     }

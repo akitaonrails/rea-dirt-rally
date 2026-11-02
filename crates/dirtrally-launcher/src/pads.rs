@@ -158,20 +158,43 @@ fn listed(list: &[serde_json::Value], vendor: u16, product: u16) -> bool {
     })
 }
 
-/// Feral's `inputdevices.json` (`original`, the game's own) with an entry
-/// for each pad in `pads` it does not list. The game's text is kept as it
-/// is; new entries go before the closing `]`. A file that is not the JSON
-/// array Feral writes is an error, never guessed at.
-pub fn input_devices(original: &str, pads: &[Pad]) -> Result<String, String> {
+/// The vendor and product of a Feral entry (its first product).
+fn ids(entry: &serde_json::Value) -> Option<(u16, u16)> {
+    let hex = |text: &str| u16::from_str_radix(text.trim().trim_start_matches("0x"), 16).ok();
+    Some((
+        entry["VendorID"].as_str().and_then(hex)?,
+        entry["ProductIDs"].get(0)?.as_str().and_then(hex)?,
+    ))
+}
+
+/// `known` (the pads seen on earlier starts) with an entry for each pad in
+/// `connected` that is new, in order, one per vendor and product.
+pub fn remember(known: &[serde_json::Value], connected: &[Pad]) -> Vec<serde_json::Value> {
+    let mut out: Vec<serde_json::Value> =
+        known.iter().filter(|e| ids(e).is_some()).cloned().collect();
+    for entry in connected.iter().filter_map(Pad::feral_entry) {
+        let (vendor, product) = ids(&entry).expect("our own entry has ids");
+        if !listed(&out, vendor, product) {
+            out.push(entry);
+        }
+    }
+    out
+}
+
+/// Feral's `inputdevices.json` (`original`, the game's own) with each of
+/// `entries` it does not list. The game's text is kept as it is; new
+/// entries go before the closing `]`. A file that is not the JSON array
+/// Feral writes is an error, never guessed at.
+pub fn input_devices(original: &str, entries: &[serde_json::Value]) -> Result<String, String> {
     let list: Vec<serde_json::Value> =
         serde_json::from_str(original).map_err(|error| format!("inputdevices.json: {error}"))?;
     let mut added: Vec<serde_json::Value> = Vec::new();
-    for pad in pads {
-        if listed(&list, pad.vendor, pad.product) || listed(&added, pad.vendor, pad.product) {
+    for entry in entries {
+        let Some((vendor, product)) = ids(entry) else {
             continue;
-        }
-        if let Some(entry) = pad.feral_entry() {
-            added.push(entry);
+        };
+        if !listed(&list, vendor, product) && !listed(&added, vendor, product) {
+            added.push(entry.clone());
         }
     }
     if added.is_empty() {
@@ -307,7 +330,7 @@ mod tests {
 
     #[test]
     fn a_pad_feral_does_not_list_is_added_as_an_xbox_360_gamepad() {
-        let out = input_devices(FERAL_LIST, &[eightbitdo(), eightbitdo()]).unwrap();
+        let out = input_devices(FERAL_LIST, &remember(&[], &[eightbitdo(), eightbitdo()])).unwrap();
         assert!(out.starts_with(FERAL_LIST.trim_end().trim_end_matches(']').trim_end()));
         let list: Vec<serde_json::Value> = serde_json::from_str(&out).unwrap();
         assert_eq!(
@@ -323,7 +346,10 @@ mod tests {
         assert_eq!(added["Type"], "Xbox360Gamepad");
         assert_eq!(sorted(added["SDLMapping"].as_str().unwrap()), sorted(X360));
         // Built again from the game's own file: the same text.
-        assert_eq!(input_devices(FERAL_LIST, &[eightbitdo()]).unwrap(), out);
+        assert_eq!(
+            input_devices(FERAL_LIST, &remember(&[], &[eightbitdo()])).unwrap(),
+            out
+        );
     }
 
     #[test]
@@ -331,14 +357,34 @@ mod tests {
         let mut xbox = eightbitdo();
         xbox.vendor = 0x045e;
         xbox.product = 0x02ea; // matched by the vendor's "*"
-        assert_eq!(input_devices(FERAL_LIST, &[xbox]).unwrap(), FERAL_LIST);
+        assert_eq!(
+            input_devices(FERAL_LIST, &remember(&[], &[xbox])).unwrap(),
+            FERAL_LIST
+        );
         assert_eq!(input_devices(FERAL_LIST, &[]).unwrap(), FERAL_LIST);
     }
 
     #[test]
+    fn a_pad_seen_once_is_remembered_and_new_ones_join_it() {
+        let known = remember(&[], &[eightbitdo()]);
+        assert_eq!(known.len(), 1);
+        // Asleep at the next start: still remembered.
+        assert_eq!(remember(&known, &[]), known);
+        // Seen again, and a second pad: one entry each.
+        let mut other = eightbitdo();
+        other.product = 0x3106;
+        let both = remember(&known, &[eightbitdo(), other]);
+        assert_eq!(both.len(), 2);
+        assert_eq!(both[1]["ProductIDs"][0], "0x3106");
+        // A broken remembered entry is dropped, not passed to the game.
+        let junk = vec![serde_json::json!({"Name": "?"})];
+        assert!(remember(&junk, &[]).is_empty());
+    }
+
+    #[test]
     fn a_broken_list_is_refused_not_guessed() {
-        assert!(input_devices("not json", &[eightbitdo()]).is_err());
-        assert!(input_devices("{\"a\": 1}", &[eightbitdo()]).is_err());
+        assert!(input_devices("not json", &remember(&[], &[eightbitdo()])).is_err());
+        assert!(input_devices("{\"a\": 1}", &remember(&[], &[eightbitdo()])).is_err());
     }
 
     #[test]

@@ -144,3 +144,15 @@ in place (read-only).
   Headless: the game loads with the edited list (74 entries, the 8BitDo
   added). Pending: the owner's check in the Controls menu and across a
   restart.
+- SDL call log (test preload, headless, pad on): with the game's own list
+  the 8BitDo is a plain joystick (`IsGameController 0 -> 0`); with our
+  entry the game calls `SDL_GameControllerAddMapping` with the device's
+  real GUID (`03000000c82d00000b31000014010000`), opens it as a game
+  controller (`IsGameController 0 -> 1`).
+- Owner, desktop: the pad was not active at start (profile still on
+  keyboard); in Options → Controls → Controls preset the list now offers
+  "Controller preset 1/2"; preset 1 came mapped correctly and the gamepad
+  worked. Pending: the preset kept across a restart.
+- Wireless pads sleep: the launcher now remembers every standard pad it has
+  seen (`~/.config/dirtrally-launcher/known-pads.json`), so a pad off at
+  start is still in the copy's list.

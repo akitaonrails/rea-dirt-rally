@@ -26,6 +26,7 @@ This project contains no game files: you need your own copy of the game.
 | The game crashes as soon as it starts on AMD Ryzen 5000 and newer (and recent Intel) CPUs | Starts and plays normally |
 | "Error while loading shared libraries": modern Linux no longer ships the old libraries the 2017 port needs | They come with the launcher and are given only to the game |
 | An "Unsupported Linux distribution" warning and Feral's pre-game window at every start | The game goes straight to its intro at your screen's size |
+| Newer gamepads (an 8BitDo, recent Xbox-style pads) are an unknown joystick: the game starts on the keyboard and forgets your mapping | They show up as gamepads with the game's own ready-made controls |
 | On a desktop with several monitors the game can open on the wrong one | With gamescope it opens fullscreen on the monitor you are using |
 | The game writes into its own folder | It plays from a private copy; your folder is only read |
 
@@ -110,18 +111,20 @@ or in `launcher.cfg`.
 
 ## Gamepad
 
-Gamepads work in the game; you may need to set the buttons in its
-**Options → Controls**. Newer pads (an 8BitDo, recent Xbox-style pads)
-are unknown to the game's own 2016 controller library, so it starts on the
-keyboard. The launcher now describes every connected pad with the
-standard layout to the game, so it should use its built-in pad controls
-without remapping; that part is still being checked.
+The game knows only the pads it shipped with in 2016, so on its own it
+treats newer ones (an 8BitDo, recent Xbox-style pads) as an unknown
+joystick, starts on the keyboard and forgets a hand-made mapping. The
+launcher adds each pad with the standard button layout to the game's own
+controller list as an Xbox 360-style pad, and the game then offers its
+ready-made pad controls.
 
-Connect the pad before you start.
-Pick **Gamepad** once in the game's **Options → Controls** if your profile
-was set to the keyboard before. Pads connected after the game starts are
-seen on the next start. Button changes and force feedback stay in the
-game's own Controls menu.
+Once, with the pad on: open **Options → Controls → Controls preset** and
+choose **Controller preset 1**. The buttons come mapped already.
+
+The launcher remembers every pad it has seen, so a wireless pad that was
+asleep when you started is still known; turn it on before you open the
+Controls menu. Button changes and force feedback stay in the game's own
+Controls menu.
 
 ## Options
 
@@ -144,7 +147,7 @@ checks your game folder without starting anything.
 
 | What | Where |
 |---|---|
-| Launcher settings and log | `~/.config/dirtrally-launcher/` (`launcher.cfg`, `launcher.log`, `play.log`) |
+| Launcher settings and log | `~/.config/dirtrally-launcher/` (`launcher.cfg`, `launcher.log`, `play.log`; `known-pads.json` lists the pads it has seen, delete it to forget them) |
 | Private copy of the game | `~/.local/share/dirtrally-launcher/runtime` |
 | The game's settings | `~/.local/share/feral-interactive/DiRT Rally/` |
 | Your saves (profile, career) | where your copy of the game keeps them; the copies tested here use `~/.local/share/Steam/ACTiVATED/310560/remote/` |
@@ -157,8 +160,8 @@ checks your game folder without starting anything.
   report the code it shows.
 - **The game opens on the wrong monitor, or rotated**: use gamescope (see
   **First run**), or set `resolution` to your main monitor's size.
-- **The pad does nothing in the game**: connect it before starting, then
-  pick **Gamepad** in the game's **Options → Controls**.
+- **The pad does nothing in the game**: turn it on, then choose
+  **Controller preset 1** in **Options → Controls → Controls preset**.
 - **Anything else**: open an issue and attach `launcher.log` and
   `play.log` from `~/.config/dirtrally-launcher/` (remove personal paths
   if you like).
@@ -169,9 +172,8 @@ checks your game folder without starting anything.
   loading under Wine).
 - No settings window yet; options are set on the command line or in
   `launcher.cfg`.
-- Not yet checked: the automatic gamepad set-up (see **Gamepad**), the
-  AppImage, the Steam Deck, wheels, and pads plugged in while the game
-  runs.
+- Not yet checked: the AppImage, the Steam Deck, wheels, and whether the
+  game keeps **Controller preset 1** across restarts.
 - Online features are gone for everyone: RaceNet shut down in 2025, so
   online events, leagues and their achievements no longer work. Offline
   career and single stages work.

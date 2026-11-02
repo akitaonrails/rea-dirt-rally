@@ -139,7 +139,8 @@ mod linux {
                 pad.layout().is_some()
             ));
         }
-        let added = start::write_input_devices(&found.root, &runtime_dir, &connected)?;
+        let known = start::known_pads(&places.config, &connected)?;
+        let added = start::write_input_devices(&found.root, &runtime_dir, &known)?;
         log.line(&format!("controller list: added {added:?}"));
 
         if first_run || saved.game.as_ref() != Some(&game) {

@@ -45,3 +45,5 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
 - Gamepads: every connected pad with the standard Linux layout (xpad and
   others) that Feral's own controller list lacks is added to that list in
   the private copy, as an Xbox 360-style gamepad.
+  The launcher remembers pads it has seen (`known-pads.json`), so a
+  wireless pad asleep at start is still listed.
