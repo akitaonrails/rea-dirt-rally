@@ -38,7 +38,7 @@ impl Stop {
         let text = text.into();
         let text = text
             .strip_suffix(&format!(":\n{UNKNOWN_EDITION_ISSUE}"))
-            .map(|kept| format!("{kept}, with {REPORT_EDITION} below."))
+            .map(|kept| format!("{kept}."))
             .unwrap_or(text);
         Stop { text, game: true }
     }
@@ -107,7 +107,11 @@ mod tests {
         let text = crate::edition::unknown_message("bin/DirtRally", &[7; 32]);
         let stop = Stop::game(text);
         assert!(!stop.text.contains(UNKNOWN_EDITION_ISSUE), "{}", stop.text);
-        assert!(stop.text.ends_with("with Report the edition below."));
+        assert!(
+            stop.text.ends_with("so it can be supported."),
+            "{}",
+            stop.text
+        );
         let message = stop.message("DiRTRallyLauncher 0.1.0");
         assert_eq!(message.link.unwrap().url, UNKNOWN_EDITION_ISSUE);
         assert!(message.printed().contains(UNKNOWN_EDITION_ISSUE));
