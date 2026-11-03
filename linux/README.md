@@ -72,8 +72,9 @@ be the wrong monitor (or a rotated one) on a multi-monitor desktop.
 - **The game opens on the wrong or a rotated monitor**: use gamescope (see
   **gamescope in a container**), or set `resolution` to your main
   monitor's size.
-- **"already running"**: a game session is still open; run
-  `dirtrally-play stop`.
+- **"already running"**: a game session, or the launcher's window, is
+  still open, so nothing was started (exit code 5). Close the window, or
+  run `dirtrally-play stop` to end the game session.
 - **The pad is not offered in the game**: turn it on, then choose
   **Controller preset 1** in **Options → Controls → Controls preset**.
 - **"The launcher's game libraries are missing"**: unpack the whole zip

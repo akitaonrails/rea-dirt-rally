@@ -437,7 +437,7 @@ mod linux {
             "# linux/dirtrally-play --play on a 3840x2160 screen, gamescope installed\n",
         );
         let first = config::first_run_text(Some(SCREEN));
-        let cases: [(&str, String, &[&str]); 5] = [
+        let cases: [(&str, String, &[&str]); 7] = [
             ("Recommended (first run)", first.clone(), &[]),
             ("Original", look(Look::Original), &[]),
             ("Steam Deck", look(Look::SteamDeck), &[]),
@@ -445,6 +445,16 @@ mod linux {
                 "Hand-written size 2560x1440",
                 "resolution = 2560x1440\n".into(),
                 &[],
+            ),
+            (
+                "Hand-written look = steam_deck, no resolution",
+                "look = steam_deck\n".into(),
+                &[],
+            ),
+            (
+                "Recommended, --look steam_deck for one run",
+                first.clone(),
+                &["--look", "steam_deck"],
             ),
             (
                 "Recommended, --resolution 1280x720 for one run",

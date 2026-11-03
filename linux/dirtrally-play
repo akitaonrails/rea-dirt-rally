@@ -75,9 +75,12 @@ fi
 # gamescope: the game runs fullscreen at the screen's size.
 REA_FULLSCREEN_SIZE=screen
 REA_SCREEN=${DIRTRALLY_SCREEN:-}
-# `--play --resolution WxH` sizes gamescope for that run, as the launcher
-# sizes the game.
-REA_HELPER_KEYS=resolution
+# The size each look gives gamescope when no resolution is set, as the
+# launcher resolves it (this run's --resolution, its --look, the file's
+# resolution, its look): Original is Feral's own window at the screen's
+# size (rea_hook_before_start), Recommended the screen, Steam Deck its
+# panel. `--play --resolution WxH` / `--look NAME` size that run.
+REA_LOOK_SIZES="original=original recommended=screen steam_deck=1280x800"
 REA_FLAG_SWITCHES="--no-window --settings --linux --check --help"
 # The game run says it was started by this helper: a player is watching,
 # so a refusal (no game, an unknown build) shows its window inside

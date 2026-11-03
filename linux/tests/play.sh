@@ -125,5 +125,44 @@ check "--resolution=WxH spelling too" \
 check "a switch before it takes no value" \
   "$(size 'resolution = fullscreen' --no-window --resolution 1280x720)" 1280x720
 
+# The looks size gamescope as the launcher sizes the game (REA_LOOK_SIZES):
+# this run's --resolution, its --look, the file's resolution, its look.
+check "a hand-written look = steam_deck: 1280x800" "$(size 'look = steam_deck')" 1280x800
+check "look = original: the screen's size" "$(size 'look = original')" 3840x2160
+check "look = recommended: the screen's size" "$(size 'look = recommended')" 3840x2160
+check "the file's resolution wins over its look" \
+  "$(size 'look = steam_deck
+resolution = 2560x1440')" 2560x1440
+check "--look for one run" "$(size 'look = recommended' --look steam_deck)" 1280x800
+check "--look for one run wins over the file's resolution" \
+  "$(size 'resolution = 2560x1440' --look steam_deck)" 1280x800
+check "--resolution for one run wins over --look" \
+  "$(size 'look = recommended' --look steam_deck --resolution 1600x900)" 1600x900
+
+echo "# a start while the game runs starts nothing and exits 5"
+cat > "$T/slow" <<'SLOW'
+#!/bin/sh
+case "$*" in *--settings*) exit 0 ;; esac
+echo "$*" >> "$T/ran"
+while [ -f "$T/hold" ]; do sleep 0.1; done
+SLOW
+chmod +x "$T/slow"
+rm -f "$T/ran"
+: > "$T/hold"
+DIRTRALLY_LAUNCHER=$T/slow REA_GAMESCOPE=off sh "$T/pkg/linux/dirtrally-play" --play > "$T/out1" 2>&1 &
+first=$!
+i=0
+while [ "$(sh "$T/pkg/linux/dirtrally-play" status)" != running ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i + 1)); done
+check "the first game runs" "$(sh "$T/pkg/linux/dirtrally-play" status)" running
+out=$(DIRTRALLY_LAUNCHER=$T/slow REA_GAMESCOPE=off sh "$T/pkg/linux/dirtrally-play" --play 2>&1); rc=$?
+check "--play while it runs: exit 5" "$rc" 5
+contains "and says so" "$out" "already running"
+out=$(DIRTRALLY_LAUNCHER=$T/slow REA_GAMESCOPE=off sh "$T/pkg/linux/dirtrally-play" 2>&1); rc=$?
+check "a plain start while it runs: exit 5" "$rc" 5
+check "only one game started" "$(wc -l < "$T/ran" | tr -d ' ')" 1
+rm -f "$T/hold"
+wait "$first"
+check "the first game ends normally: exit 0" "$?" 0
+
 [ "$fails" -eq 0 ] || { echo "$fails failed"; exit 1; }
 echo "all passed"
