@@ -13,11 +13,10 @@
 //! so nothing here is game-written. The launcher places nothing in the
 //! runtime: its libraries live in its own package.
 
-use std::io;
 use std::path::Path;
 
 use rea_launcher::paths;
-use rea_launcher::runtime::{self, Policy, Stamp, SyncReport};
+use rea_launcher::runtime::{self, Policy, Progress, Stamp, SyncReport};
 
 /// The runtime's record of what it brought over.
 pub const MANIFEST: &str = ".dirtrally-manifest";
@@ -54,9 +53,20 @@ pub const INPUT_DEVICES: &str = "share/inputdevices.json";
 
 /// Brings the game folder into `runtime`, which may never overlap it.
 pub fn prepare(game: &Path, runtime: &Path) -> Result<SyncReport, String> {
+    prepare_with_progress(game, runtime, &mut |_| {})
+}
+
+/// [`prepare`], reporting how far it is after each file
+/// (`runtime::sync_with_progress`).
+pub fn prepare_with_progress(
+    game: &Path,
+    runtime: &Path,
+    progress: &mut dyn FnMut(Progress),
+) -> Result<SyncReport, String> {
     paths::check_separate(game, runtime)?;
     check_ours(runtime)?;
-    sync(game, runtime).map_err(|error| format!("Cannot prepare {}: {error}", runtime.display()))
+    runtime::sync_with_progress(game, runtime, &GamePolicy, MANIFEST, progress)
+        .map_err(|error| format!("Cannot prepare {}: {error}", runtime.display()))
 }
 
 /// Marks a runtime folder as the launcher's from the moment its first copy
@@ -82,10 +92,6 @@ fn check_ours(runtime: &Path) -> Result<(), String> {
          for the launcher's private copy of the game.",
         runtime.display()
     ))
-}
-
-fn sync(game: &Path, runtime: &Path) -> io::Result<SyncReport> {
-    runtime::sync(game, runtime, &GamePolicy, MANIFEST)
 }
 
 #[cfg(all(test, unix))]
