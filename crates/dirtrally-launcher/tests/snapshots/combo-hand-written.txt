@@ -1,0 +1,70 @@
+# Hand-written launcher.cfg: Original, then a size (the size wins)
+
+flags: (none)
+screen: 3840x2160
+hidden before: false
+picture: resolution 2560x1440
+start: Direct { width: 2560, height: 1440 }
+
+## preferences values set (Setup key)
+SeenSpecificationAlertUUIDLnxDistributionUnsupported = Integer(1)
+GameOptionsDialogShown = Integer(1)
+GameOptionsDialogShouldShow = Integer(0)
+ScreenW = Integer(2560)
+ScreenH = Integer(1440)
+CrashCounter = Integer(0)
+
+## preferences, none yet (seeded)
+<?xml version="1.0" encoding="UTF-8"?>
+<registry>
+    <key name="HKEY_CURRENT_USER">
+        <key name="Software">
+            <key name="Feral Interactive">
+                <key name="DiRT Rally">
+                    <key name="Setup">
+                        <value name="SeenSpecificationAlertUUIDLnxDistributionUnsupported" type="integer">1</value>
+                        <value name="GameOptionsDialogShown" type="integer">1</value>
+                        <value name="GameOptionsDialogShouldShow" type="integer">0</value>
+                        <value name="ScreenW" type="integer">2560</value>
+                        <value name="ScreenH" type="integer">1440</value>
+                        <value name="CrashCounter" type="integer">0</value>
+                    </key>
+                </key>
+            </key>
+        </key>
+    </key>
+</registry>
+
+## preferences, the game's own file
+<?xml version="1.0" encoding="UTF-8"?>
+<registry>
+    <key name="HKEY_CURRENT_USER">
+        <key name="Software">
+            <key name="Feral Interactive">
+                <key name="DiRT Rally">
+                    <key name="Setup">
+                        <value name="CrashCounter" type="integer">0</value>
+                        <value name="FullScreen" type="integer">1</value>
+                        <value name="GameOptionsDialogShouldShow" type="integer">0</value>
+                        <value name="ScreenH" type="integer">1440</value>
+                        <value name="ScreenW" type="integer">2560</value>
+                        <value name="SeenSpecificationAlertUUIDLnxDistributionUnsupported" type="integer">1</value>
+                        <value name="GameOptionsDialogShown" type="integer">1</value>
+                    </key>
+                </key>
+            </key>
+        </key>
+    </key>
+</registry>
+
+## the game's process
+program: /home/José/.local/share/dirtrally-launcher/runtime/bin/DirtRally
+cwd: /home/José/.local/share/dirtrally-launcher/runtime/bin
+args: []
+set LD_LIBRARY_PATH=/home/José/.local/share/dirtrally-launcher/runtime/lib/x86_64:/opt/DiRT Rally Launcher/game-libs/compat:/opt/DiRT Rally Launcher/game-libs
+set LD_PRELOAD=libsteam_api.so:libdirtrally_exec_read.so
+set SteamAppId=310560
+set GameAppId=310560
+set __GL_SHADER_DISK_CACHE_PATH=/home/José/.local/share/feral-interactive/DiRT Rally/driver-gl-shader-cache
+set SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+unset LC_ALL

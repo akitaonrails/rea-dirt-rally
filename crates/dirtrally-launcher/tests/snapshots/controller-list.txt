@@ -1,0 +1,70 @@
+# Pads connected at start
+
+8BitDo Ultimate 2, Wireless (2dc8:310b): a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8
+Xbox 360 pad (already listed) (045e:028e): a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8
+Logitech pad (vendor listed with *) (046d:c24f): a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8
+Flight stick (not a gamepad) (044f:b10a): no standard layout
+
+## known-pads.json
+[
+  {
+    "Category": "Gamepad",
+    "Name": "8BitDo Ultimate 2 Wireless",
+    "ProductIDs": [
+      "0x310b"
+    ],
+    "SDLMapping": "a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8",
+    "Type": "Xbox360Gamepad",
+    "VendorID": "0x2dc8"
+  },
+  {
+    "Category": "Gamepad",
+    "Name": "Xbox 360 pad (already listed)",
+    "ProductIDs": [
+      "0x028e"
+    ],
+    "SDLMapping": "a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8",
+    "Type": "Xbox360Gamepad",
+    "VendorID": "0x045e"
+  },
+  {
+    "Category": "Gamepad",
+    "Name": "Logitech pad (vendor listed with *)",
+    "ProductIDs": [
+      "0xc24f"
+    ],
+    "SDLMapping": "a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8",
+    "Type": "Xbox360Gamepad",
+    "VendorID": "0x046d"
+  }
+]
+
+## share/inputdevices.json in the private copy
+[
+    {
+        "Name": "X360 Controller",
+        "VendorID": "0x045e",
+        "ProductIDs": ["0x028e"],
+        "Category": "Gamepad",
+        "Type": "Xbox360Gamepad"
+    },
+    {
+        "Name": "Any Logitech wheel",
+        "VendorID": "0x046d",
+        "ProductIDs": ["*"],
+        "Category": "Wheel"
+    },
+    {
+      "Category": "Gamepad",
+      "Name": "8BitDo Ultimate 2 Wireless",
+      "ProductIDs": [
+        "0x310b"
+      ],
+      "SDLMapping": "a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8",
+      "Type": "Xbox360Gamepad",
+      "VendorID": "0x2dc8"
+    }
+]
+
+## the same list when no pad is new
+(the game's own file, byte for byte)

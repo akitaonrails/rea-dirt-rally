@@ -5,6 +5,21 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
 
 ## [Unreleased]
 
+### Changed
+
+- A runtime folder with a `:` in its name (which Linux cannot put in a
+  library search path) is refused before the private copy is made, not
+  after copying the whole game.
+
+### Internal
+
+- Golden snapshots (`crates/dirtrally-launcher/tests/snapshots.rs`) of
+  `--help`, the `launcher.cfg` template and first run, and for each look
+  and a few option combinations the start plan: the `preferences` values,
+  the game's environment, Feral's controller list and the Linux helper's
+  gamescope command line. `start::plan` is the one place a start is
+  decided.
+
 ## [0.1.0] - 2026-11-02
 
 First release: plays DiRT Rally's Linux version (Feral Interactive's 1.0,

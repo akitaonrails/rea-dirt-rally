@@ -118,6 +118,18 @@ mod linux {
             || places.runtime.clone(),
             |path| start::resolve_runtime(path, &home(), &cwd),
         );
+        // Planned before anything is copied or written: a runtime folder
+        // Linux cannot use is refused before a 40 GB copy.
+        let screen = screen_size();
+        let restore = places.config.join(start::HIDDEN_MARKER).is_file();
+        let plan = start::plan(
+            &settings,
+            screen,
+            restore,
+            &runtime_dir,
+            &package,
+            &plan::host_from_env(),
+        )?;
         let report = runtime::prepare(&found.root, &runtime_dir)?;
         for warning in &report.warnings {
             log.line(&format!("warning: {warning}"));
@@ -128,16 +140,14 @@ mod linux {
             report.brought,
             report.linked
         ));
-        let screen = screen_size();
-        let restore = places.config.join(start::HIDDEN_MARKER).is_file();
-        let how = start::start_for(settings.picture().resolution, screen, restore);
         log.line(&format!(
-            "picture: {}; screen {}x{}; start {how:?}",
+            "picture: {}; screen {}x{}; start {:?}",
             settings.picture().describe(),
             screen.0,
-            screen.1
+            screen.1,
+            plan.start
         ));
-        let prefs = start::write_prefs(&home(), &places.config, how)?;
+        let prefs = start::write_prefs(&home(), &places.config, plan.start)?;
         log.line(&format!("preferences: {}", prefs.display()));
         let connected = pads::pads(std::path::Path::new("/sys/class/input"));
         for pad in &connected {
@@ -163,7 +173,7 @@ mod linux {
                 .map_err(|error| format!("Cannot save {}: {error}", path.display()))?;
         }
 
-        let launch = plan::launch(&runtime_dir, &package, &plan::host_from_env())?;
+        let launch = plan.launch;
         log.line(&format!(
             "start: {} in {}",
             launch.program.display(),

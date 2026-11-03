@@ -34,6 +34,8 @@ game in a test" (under "Testing").
 | `crates/dirtrally-launcher/src/cli.rs` | Modes (`--settings`, `--no-window`, `--check`, `--help`), exit codes |
 | `crates/dirtrally-launcher/src/form.rs`, `ui.rs`, `palette.rs` | The settings window and its headless tests |
 | `crates/dirtrally-launcher/src/runtime.rs` | The runtime copy's `Policy` |
+| `crates/dirtrally-launcher/src/start.rs` | `start::plan` (one start, before any file is touched), Linux folders, `preferences`, pads |
+| `crates/dirtrally-launcher/tests/snapshots.rs`, `tests/snapshots/` | Golden snapshots; `DIRTRALLY_UPDATE_SNAPSHOTS=1` rewrites them, review the diff |
 | `crates/dirtrally-launcher/src/main.rs` | Windows wiring: console, window, `launcher.log`, the game's process |
 | `linux/dirtrally-play`, `linux/tests/` | The Linux helper (sources `sdk/rea-play.sh`) and its tests |
 | `packaging/` | Pins, allowlist, package script, AppImage desktop entry and icon |

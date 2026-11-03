@@ -20,6 +20,7 @@ use rea_launcher::fsx;
 
 use rea_launcher::paths;
 
+use crate::config::Settings;
 use crate::plan::{self, Package};
 use crate::{pads, prefs, runtime};
 
@@ -144,6 +145,31 @@ pub fn start_for(
             height: screen.1,
         },
     }
+}
+
+/// Everything one start decides before any file is touched: how the game
+/// starts (the values the launcher sets in its `preferences`) and the
+/// game's process. The golden snapshots (`tests/snapshots.rs`) compare it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Plan {
+    pub start: prefs::Start,
+    pub launch: plan::Launch,
+}
+
+/// The [`Plan`] for `settings` on `screen` from `runtime`; `restore` when
+/// the launcher hid Feral's window on an earlier start ([`HIDDEN_MARKER`]).
+pub fn plan(
+    settings: &Settings,
+    screen: (u32, u32),
+    restore: bool,
+    runtime: &Path,
+    package: &Package,
+    host: &plan::Host,
+) -> Result<Plan, String> {
+    Ok(Plan {
+        start: start_for(settings.picture().resolution, screen, restore),
+        launch: plan::launch(runtime, package, host)?,
+    })
 }
 
 /// The screen size from `xrandr --current` output (`Screen 0: … current
