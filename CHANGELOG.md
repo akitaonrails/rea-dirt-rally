@@ -5,59 +5,45 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-02
+
+First release: plays DiRT Rally's Linux version (Feral Interactive's 1.0,
+build 31946) on a modern Linux desktop, from a zip or an AppImage.
+
 ### Added
 
-- Scaffold from rea-launcher-sdk v0.3.3 (`scripts/new-launcher`): edition
-  table and unknown-edition refusal, option table (`look`, `resolution`,
-  `vsync` as examples), settings window, `--check`, `--no-window`, the
-  Linux helper, packaging and CI.
-- Editions: Feral's Linux port 1.0 (build 31946) is recognised and
-  playable; the Windows v1.1 `drt.exe` is recognised and refused with the
-  reason (it stops while loading under Wine). The game is found in the
-  chosen folder or its only subfolder.
-- `dirtrally-exec-read`: a small preload library that makes executable
-  memory readable, fixing the Linux port's start-up crash on CPUs with
-  memory protection keys (AMD Zen 3 and later). Verified on a stage run.
-- Runtime policy for the Linux port: the game data (`share/`) is hard-linked
-  when on the same disk, the program folders are copied; the game always
-  runs from that private copy.
-- Start plan (`plan.rs`): the environment Feral's own script sets, plus the
-  legacy libraries and the exec-read fix, with library names that survive
-  spaces in paths. A folder with `:` is refused with a reason.
-- The game's `preferences` file: owned values spliced into the game's own
-  text; seeded when missing. Hides the "Unsupported Linux distribution"
-  alert.
-- Options: `look` (Original keeps Feral's pre-game window; Recommended and
-  Steam Deck start the game directly) and `resolution` (`fullscreen`, a size,
-  or `original`). The example `vsync` option is gone (not verified in this
-  game).
-- Linux launcher (`DiRTRallyLauncher`): `--check`, `--no-window` and the
-  Linux helper in native mode (`linux/dirtrally-play`); settings and log in
-  `~/.config/dirtrally-launcher`, the private copy in
-  `~/.local/share/dirtrally-launcher/runtime`.
-- Linux package: the launcher, its exec-read library and the legacy
-  libraries from pinned Steam scout packages (`game-libs/`), kept off the
-  launcher's own library path.
-- `DIRTRALLY_RUN`: run gamescope and the game through a wrapper such as
-  `distrobox enter gaming --`, keeping the player's HOME and XDG folders.
-  Without gamescope, a multi-monitor desktop can put the game on the wrong
-  screen (SDL 2.0.5 uses display 0).
-- Gamepads: every connected pad with the standard Linux layout (xpad and
-  others) that Feral's own controller list lacks is added to that list in
-  the private copy, as an Xbox 360-style gamepad.
-  The launcher remembers pads it has seen (`known-pads.json`), so a
-  wireless pad asleep at start is still listed.
-- Settings window on Linux: the game folder with **Browse…** (zenity or
-  kdialog) and its edition check, the looks, the resolution, and **Play**,
-  which makes the first private copy with its progress before the game
-  starts. Mouse, keyboard and gamepad (`/dev/input/js*`). Photo: Chris Cox,
-  CC BY 2.0.
-- Safer files: the `runtime` setting accepts `~`, `~/…` (`~\\…` on Windows),
-  relative and absolute paths; a runtime folder must be empty or the
-  launcher's own (a copy stopped half way carries on); the game's
-  `preferences` are backed up once (`preferences.before-launcher`) before
-  the first change and left alone when they are not text; the launcher
-  refuses to start without a `HOME`.
-- `dirtrally-play --check` checks the game folder without starting anything.
-- CI builds the native Linux zip and AppImage (Ubuntu 22.04) and runs the
-  Windows-target tests under Wine.
+- **The start-up crash on newer CPUs is fixed.** The 2017 build crashed right
+  after starting on AMD Ryzen 5000 and newer (and recent Intel) CPUs; a small
+  library of the launcher's (`dirtrally-exec-read`) fixes it without
+  touching the game.
+- **The libraries modern Linux no longer ships** (OpenSSL 1.0, libidn11,
+  librtmp, OpenLDAP 2.4, GConf and their companions) come with the launcher,
+  from pinned Steam Runtime packages, and reach only the game.
+- **Straight into the game.** Feral's pre-game window and its "Unsupported
+  Linux distribution" warning are skipped; the game opens fullscreen at
+  your screen's size (4K works). The **Original** look keeps Feral's window.
+- **Newer gamepads work** (an 8BitDo, recent Xbox-style pads): the launcher
+  adds each standard-layout pad to the game's own controller list, so the
+  game offers its ready-made **Controller preset 1**. Pads seen once are
+  remembered, so a wireless pad asleep at start is still known.
+- **A settings window**: the game folder with **Browse…** and a check of the
+  version found (an unknown build is refused with its SHA-256 and a report
+  link; the Windows version is recognised and refused with the reason), the
+  looks, the resolution, and **Play**, which makes the private copy with its
+  progress the first time. Mouse, keyboard and gamepad.
+- **Your game folder is only read**: the game plays from a private copy
+  (about 40 GB the first time; hard links when it is on the same disk), and
+  the game's own `preferences` are backed up once before the launcher first
+  changes them.
+- **gamescope** gives a fullscreen session on the right monitor; it can come
+  from a distrobox (`DIRTRALLY_RUN="distrobox enter gaming --"`).
+- Command line: `--check`, `--play`, `--game`, `--look`, `--resolution`;
+  `dirtrally-play stop` and `status`.
+
+### Known limitations
+
+- The Windows version of the game is not supported yet (it stops while
+  loading under Wine).
+- Not yet checked: the Steam Deck and wheels.
+- RaceNet shut down in 2025, so online events and leagues no longer work;
+  offline career and single stages do.
