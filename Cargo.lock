@@ -420,7 +420,6 @@ dependencies = [
 name = "dirtrally-launcher"
 version = "0.1.0"
 dependencies = [
- "libc",
  "quick-xml",
  "rea-launcher",
  "rea-launcher-ui",

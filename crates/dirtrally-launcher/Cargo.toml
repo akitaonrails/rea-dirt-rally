@@ -22,9 +22,6 @@ serde_json = "1"
 # The settings window, on Linux (the supported edition) and Windows.
 rea-launcher-ui.workspace = true
 
-[target.'cfg(target_os = "linux")'.dependencies]
-libc = "0.2"
-
 # The settings window also builds on the host for its tests: the palette's
 # contrast test and the headless window tests (egui_kittest) run with
 # `cargo test` and under `sdk/scripts/wine-test`.

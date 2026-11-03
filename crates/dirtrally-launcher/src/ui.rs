@@ -335,6 +335,8 @@ mod app {
     use rea_launcher::fsx;
     use rea_launcher_ui::eframe;
     use rea_launcher_ui::egui;
+    #[cfg(target_os = "linux")]
+    use rea_launcher_ui::pad::joystick::Joysticks;
     use rea_launcher_ui::pad::{self, Nav, PadNav};
     use rea_launcher_ui::theme;
     use rea_launcher_ui::widgets;
@@ -354,15 +356,16 @@ mod app {
         Closed,
     }
 
-    /// The pads, as XInput-style bits.
+    /// The pads, as XInput-style bits: the SDK's `/dev/input/js*` reader
+    /// on Linux, XInput on Windows.
     #[derive(Default)]
-    struct Pads {
+    pub(super) struct Pads {
         #[cfg(target_os = "linux")]
-        js: crate::jspad::Pads,
+        pub(super) js: Joysticks,
     }
 
     impl Pads {
-        fn buttons(&mut self) -> u16 {
+        pub(super) fn buttons(&mut self) -> u16 {
             #[cfg(target_os = "linux")]
             {
                 self.js.buttons()
@@ -754,6 +757,41 @@ mod tests {
         ui.get_by_role_and_label(Role::Button, "Play").click();
         ui.run();
         assert!(ui.state().play);
+    }
+
+    /// The window reads every pad through the SDK's joystick reader: a
+    /// pad's Start (joystick button 7) is Play, once per press.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_pads_start_button_plays() {
+        use rea_launcher_ui::pad::joystick::{self, Device, Joysticks};
+        use rea_launcher_ui::pad::{Nav, PadNav};
+        use std::time::Duration;
+
+        struct Pressed(Vec<[u8; 8]>);
+        impl std::io::Read for Pressed {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                match self.0.pop() {
+                    Some(event) => {
+                        buf[..8].copy_from_slice(&event);
+                        Ok(8)
+                    }
+                    None => Err(std::io::ErrorKind::WouldBlock.into()),
+                }
+            }
+        }
+        let start = [0, 0, 0, 0, 1, 0, joystick::EVENT_BUTTON, 7];
+        let mut pads = app::Pads {
+            js: Joysticks::with_scan(Duration::from_secs(3600), move || {
+                vec![Box::new(Pressed(vec![start])) as Device]
+            }),
+        };
+        let mut nav = PadNav::default();
+        assert_eq!(nav.update(pads.buttons()), [Nav::Play]);
+        assert!(
+            nav.update(pads.buttons()).is_empty(),
+            "held, not pressed again"
+        );
     }
 
     #[test]

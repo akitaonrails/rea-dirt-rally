@@ -20,8 +20,6 @@ pub mod config;
 pub mod copy;
 pub mod edition;
 pub mod form;
-#[cfg(target_os = "linux")]
-pub mod jspad;
 pub mod pads;
 pub mod plan;
 pub mod prefs;
