@@ -204,24 +204,58 @@ in place (read-only).
 - `dirtrally-play --play --resolution 1280x720`: gamescope opens at
   1280x720 for that run.
 
-## Pending checks (SDK v0.4.1)
+## 2026-11-03: SDK v0.4.1 against the real game (headless)
 
-- Error window: the launcher started with no game folder, a folder
-  without the game and an unknown build, from a desktop with no terminal,
-  shows the SDK's message window with "Report the edition" (screenshot,
-  headless); `dirtrally-play --play` with a missing game shows it inside
-  gamescope, and OK ends the run with exit 1.
-- One instance: a second `DiRTRallyLauncher` (window or `--no-window`)
-  while the game runs says it is already running and exits 5; the lock is
-  free again after the game exits, after `dirtrally-play stop` and after
-  Ctrl+C on the helper.
-- Copy progress: the first copy into an empty runtime counts up to the
-  game's size; a later start with the copy up to date goes straight on.
-- Looks: a hand-written `look = steam_deck` without `resolution` starts
-  gamescope at 1280x800; Original, Recommended and Steam Deck each reach
-  the game.
-- Pads in the settings window through the SDK's joystick reader
-  (`pad::joystick`): D-pad moves, A presses, Start plays.
-- Quit paths and leftovers: quit from the game's menu, gamescope closed,
-  SIGINT and SIGTERM to `dirtrally-play`, `dirtrally-play stop`; no game,
-  launcher or gamescope process left behind.
+Packaged launcher (`packaging/package.sh --no-appimage`, pinned game-libs),
+the owner's ACTiVATED 1.0RC14 copy (read only), runtime in `.work/`, an
+isolated HOME and `XDG_RUNTIME_DIR`, `env -i` with SDL's disk audio driver
+to `/dev/null`; `dirtrally-play --play` with the helper's headless-gamescope
+test seam (`REA_TEST=1 REA_GAMESCOPE_HEADLESS=1`), screen 2560x1440
+(`DIRTRALLY_SCREEN`). Processes found by name and session id only; only
+our own session was ever signalled.
+
+- **Looks:** Recommended: gamescope 2560x1440, intro then title screen.
+  A hand-written `look = steam_deck` with no `resolution`: gamescope
+  **1280x800** (was the screen's size before `REA_LOOK_SIZES`), title
+  screen. Original: gamescope 2560x1440, Feral's pre-game window
+  (930x640); its PLAY reaches the intro.
+- **Error window** (the SDK's, in headless gamescope): `--play` with a
+  folder that holds no game shows "There is no DiRT Rally in …" with
+  **Report the edition**, **Copy details** and **OK**; OK ends the run
+  (`reported to: Window` in `launcher.log`). The launcher alone with an
+  unknown build (no terminal, a display: a double-clicked AppImage) shows
+  the SHA-256 and the same buttons. The window is 560x300 and scrolls, so
+  a long text pushes the form's address under the fold (it is still on the
+  button and in Copy details).
+- **One instance:** while the game ran, `DiRTRallyLauncher --no-window`
+  and a plain start exited **5** with "The game or its launcher is already
+  running, so nothing was started…"; `dirtrally-play --play` and a plain
+  `dirtrally-play` said "already running" and exited **5**. The lock was
+  free again after every quit path below.
+- **Copy progress:** Play in the settings window with an empty runtime
+  (game on the NAS): "4.3 of 43.1 GB" after 25 s, "6.1 of 43.1 GB" after
+  45 s, the bar moving; the launcher was then stopped and the partial copy
+  deleted. Starts with the copy up to date: "0 brought, 0 linked".
+- **Pads in the window:** not run. Simulating a pad needs `/dev/uinput`
+  (root only here), and a virtual pad would be seen by the whole desktop;
+  the SDK reader is covered by a test feeding fake joystick events.
+
+### Quitting and leftovers
+
+| Quit path | Status | Leftover processes | Notes |
+|---|---|---|---|
+| Quit from the game's menu (Main menu, Escape, Exit game, OK) | works | none | session gone in 2 s; game exit 0; no crash dump |
+| gamescope closed (SIGTERM to its process) | works | none | session gone in 10 s |
+| `dirtrally-play stop` (SIGTERM to the session) | works (4 runs) | none | |
+| SIGTERM to `dirtrally-play` | works | none | session gone in 6 s, helper exit 143 |
+| Ctrl+C / SIGINT to `dirtrally-play` | works | none | session gone in 1 s, helper exit 143 |
+| Second start while the game runs | refused, exit 5 | — | launcher and helper both |
+
+Seen on every path that ends the session from outside (stop, signals,
+gamescope closed): gamescope's reaper ends the session, the game loses its
+X display first and Feral's crash handler writes a ~3.4 MB `.dmp` under
+`~/.local/share/feral-interactive/DiRT Rally/crashes/` (nothing is left
+running; the crash reporter ends with the session). Quitting from the
+game's menu writes none. The waiting helper then exits 139 (headless
+gamescope crashes on its own shutdown, also after a menu quit), so its exit
+code says nothing about the game; `launcher.log` has the game's.
