@@ -18,6 +18,10 @@ pub const TITLE: &str = "DiRT Rally";
 /// The link button's text.
 pub const REPORT_EDITION: &str = "Report the edition";
 
+/// A second start while a launcher (or the game it started) runs.
+pub const ALREADY_RUNNING: &str = "The game or its launcher is already running, so nothing \
+     was started. Close the game or the launcher's window, then start it again.";
+
 /// Why a run stopped, in the player's words.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stop {

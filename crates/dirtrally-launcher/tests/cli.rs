@@ -166,11 +166,14 @@ mod program {
 
     fn run(name: &str, args: &[&str]) -> (Output, PathBuf) {
         let home = scratch(name).join("home");
+        std::fs::create_dir_all(home.join("run")).unwrap();
         let output = Command::new(env!("CARGO_BIN_EXE_DiRTRallyLauncher"))
             .args(args)
             .env("HOME", &home)
             .env("XDG_CONFIG_HOME", home.join(".config"))
             .env("XDG_DATA_HOME", home.join(".local/share"))
+            // Its own instance lock, never a real launcher's.
+            .env("XDG_RUNTIME_DIR", home.join("run"))
             .env_remove("DIRTRALLY_GAME_LIBS")
             // Headless: the window can never open on the desktop.
             .env_remove("DISPLAY")
@@ -250,6 +253,53 @@ mod program {
         let stderr = text(&output.stderr);
         assert!(stderr.contains("No game folder yet"), "{stderr}");
         assert!(stderr.contains(edition::UNKNOWN_EDITION_ISSUE), "{stderr}");
+    }
+
+    /// One launcher at a time: while another holds the lock (a launcher
+    /// waiting for its game), a start exits 5 and says why; --check and
+    /// --help still answer.
+    #[test]
+    fn a_second_start_is_refused_with_exit_5() {
+        let home = scratch("second").join("home");
+        let lock = home
+            .join("run")
+            .join("rea-launcher-dirtrally-launcher.lock");
+        let held = rea_launcher::instance::single_at(&lock).unwrap();
+        assert!(held.is_held());
+        let run_again = |args: &[&str]| {
+            Command::new(env!("CARGO_BIN_EXE_DiRTRallyLauncher"))
+                .args(args)
+                .env("HOME", &home)
+                .env("XDG_CONFIG_HOME", home.join(".config"))
+                .env("XDG_DATA_HOME", home.join(".local/share"))
+                .env("XDG_RUNTIME_DIR", home.join("run"))
+                .env_remove("DISPLAY")
+                .env_remove("WAYLAND_DISPLAY")
+                .output()
+                .unwrap()
+        };
+        for args in [
+            &["--no-window", "--linux"][..],
+            &["--settings", "--linux"],
+            &[],
+        ] {
+            let output = run_again(args);
+            assert_eq!(output.status.code(), Some(5), "{args:?}");
+            assert!(
+                text(&output.stderr)
+                    .starts_with("DiRT Rally: The game or its launcher is already running"),
+                "{args:?}: {}",
+                text(&output.stderr)
+            );
+        }
+        assert_eq!(run_again(&["--help"]).status.code(), Some(cli::OK));
+        assert_eq!(run_again(&["--check"]).status.code(), Some(cli::REFUSED));
+        drop(held);
+        // Released: the next start gets past the lock (no game folder yet).
+        assert_eq!(
+            run_again(&["--no-window", "--linux"]).status.code(),
+            Some(cli::REFUSED)
+        );
     }
 
     #[test]

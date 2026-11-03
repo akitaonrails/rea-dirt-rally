@@ -10,6 +10,11 @@
 //! - [`runtime`]: the private runtime copy of the game folder.
 //! - `palette`, `ui`: the settings window (Windows, and the host's tests).
 
+/// The native Linux launcher's instance lock
+/// (`rea_launcher::instance::single`): one launcher, and so one game, at a
+/// time.
+pub const INSTANCE: &str = "dirtrally-launcher";
+
 pub mod cli;
 pub mod config;
 pub mod copy;

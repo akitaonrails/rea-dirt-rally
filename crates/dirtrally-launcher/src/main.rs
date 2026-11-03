@@ -28,7 +28,7 @@ mod linux {
     use dirtrally_launcher::report::{self, Stop};
     use dirtrally_launcher::{config, pads, plan, runtime, start, ui};
     use rea_launcher::log::Log;
-    use rea_launcher::{cfg, fsx};
+    use rea_launcher::{cfg, fsx, instance};
     use rea_launcher_win32::report::{Audience, Run};
 
     fn home() -> PathBuf {
@@ -84,6 +84,20 @@ mod linux {
             }
         };
         let mode = report::mode(invocation.audience(false));
+        // One launcher at a time, held until the game exits (the guard
+        // drops when `run` returns). --help and --check change nothing, so
+        // they answer while a game runs.
+        let _instance = match invocation.mode {
+            Mode::Help | Mode::Check => None,
+            _ => match instance::single(dirtrally_launcher::INSTANCE) {
+                Ok(guard) => Some(guard),
+                Err(running) => {
+                    log.line(&format!("refused: {running}"));
+                    fail(&log, &places, &Stop::other(report::ALREADY_RUNNING), mode);
+                    return running.exit_code();
+                }
+            },
+        };
         match run_mode(&log, &places, invocation) {
             Ok(code) => code,
             Err(stop) => {
