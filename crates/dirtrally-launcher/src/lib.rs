@@ -20,6 +20,7 @@ pub mod jspad;
 pub mod pads;
 pub mod plan;
 pub mod prefs;
+pub mod report;
 pub mod runtime;
 pub mod start;
 

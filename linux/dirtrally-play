@@ -79,6 +79,10 @@ REA_SCREEN=${DIRTRALLY_SCREEN:-}
 # sizes the game.
 REA_HELPER_KEYS=resolution
 REA_FLAG_SWITCHES="--no-window --settings --linux --check --help"
+# The game run says it was started by this helper: a player is watching,
+# so a refusal (no game, an unknown build) shows its window inside
+# gamescope instead of only reaching the log.
+REA_PLAY_ARGS="--no-window --linux"
 
 # Original: Feral's own window chooses the size, so gamescope is the
 # screen, as the game saw it when it shipped (not the 1920x1080 default).

@@ -24,9 +24,12 @@ mod linux {
     use std::process::Command;
 
     use dirtrally_launcher::cli::{self, Invocation, Mode};
+    use dirtrally_launcher::palette::{METRICS, PALETTE};
+    use dirtrally_launcher::report::{self, Stop};
     use dirtrally_launcher::{config, pads, plan, runtime, start, ui};
     use rea_launcher::log::Log;
     use rea_launcher::{cfg, fsx};
+    use rea_launcher_win32::report::{Audience, Run};
 
     fn home() -> PathBuf {
         std::env::var_os("HOME")
@@ -42,43 +45,55 @@ mod linux {
         )
     }
 
-    // Waiting for rea-launcher-sdk v0.4.0 (not in v0.3.3):
-    // - Errors reach only stderr and launcher.log, so a double-clicked
-    //   AppImage with a missing or unknown game exits silently. The SDK's
-    //   egui error window goes in the two `Err` arms of `run` below, for
-    //   every mode but `--help`/`--check`/`--no-window` from a terminal and
-    //   never for `--settings --linux` (the helper reports exit codes).
-    // - Only dirtrally-play/the AppImage hold a lock; the binary run on its
-    //   own can start a second game. The SDK's unix single-instance lock is
-    //   taken in `run_mode` right after `Mode::Help` (before the window),
-    //   held until `spawn` returns, with an "already running" message.
+    /// Logs and prints `stop`, and shows it in the SDK's message window
+    /// when a person may be watching on a desktop (`mode`, from the SDK's
+    /// audience rule).
+    fn fail(log: &Log, places: &start::Places, stop: &Stop, mode: rea_launcher_ui::report::Mode) {
+        let details = format!(
+            concat!("DiRTRallyLauncher ", env!("CARGO_PKG_VERSION"), "\nlog: {}"),
+            places.config.join("launcher.log").display()
+        );
+        let message = stop.message(&details);
+        log.line(&format!("error: {}", message.printed()));
+        let audience = rea_launcher_ui::report::fatal(&PALETTE, &METRICS, &message, mode);
+        log.line(&format!("reported to: {audience:?}"));
+    }
+
     pub fn run() -> i32 {
-        if let Err(error) = start::checked_home(std::env::var_os("HOME")) {
-            eprintln!("{error}");
-            return cli::REFUSED;
-        }
+        let args: Vec<String> = std::env::args().skip(1).collect();
+        // Until the command line is read, it answers like a command.
+        let as_command = report::mode(Audience::of(
+            Run {
+                command: true,
+                ..Run::from_args(&args, &[])
+            },
+            false,
+        ));
         let places = places();
         let log = Log::new(places.config.join("launcher.log"));
+        if let Err(error) = start::checked_home(std::env::var_os("HOME")) {
+            fail(&log, &places, &Stop::other(error), as_command);
+            return cli::REFUSED;
+        }
         log.line(concat!("DiRTRallyLauncher ", env!("CARGO_PKG_VERSION")));
-        let invocation = match cli::parse(std::env::args().skip(1)) {
+        let invocation = match cli::parse(args) {
             Ok(invocation) => invocation,
             Err(error) => {
-                log.line(&format!("error: {error}"));
-                eprintln!("{error}");
+                fail(&log, &places, &Stop::other(error), as_command);
                 return cli::USAGE_ERROR;
             }
         };
+        let mode = report::mode(invocation.audience(false));
         match run_mode(&log, &places, invocation) {
             Ok(code) => code,
-            Err(error) => {
-                log.line(&format!("error: {error}"));
-                eprintln!("{error}");
+            Err(stop) => {
+                fail(&log, &places, &stop, mode);
                 cli::REFUSED
             }
         }
     }
 
-    fn run_mode(log: &Log, places: &start::Places, invocation: Invocation) -> Result<i32, String> {
+    fn run_mode(log: &Log, places: &start::Places, invocation: Invocation) -> Result<i32, Stop> {
         if invocation.mode == Mode::Help {
             println!("{}", config::usage());
             return Ok(cli::OK);
@@ -109,7 +124,7 @@ mod linux {
         }
         let settings = saved.clone().merged(invocation.flags);
         let cwd = std::env::current_dir().unwrap_or_default();
-        let (game, found) = cli::check(&settings, &cwd)?;
+        let (game, found) = cli::check(&settings, &cwd).map_err(Stop::game)?;
         log.line(&format!(
             "game: {} ({}, {})",
             found.root.display(),

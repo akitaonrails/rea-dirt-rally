@@ -216,6 +216,42 @@ mod program {
         );
     }
 
+    /// The helper's game run with an unknown build: refused with exit 1,
+    /// the text and the unknown-edition form printed for the log (a window
+    /// too on a desktop; these runs have none).
+    #[test]
+    fn the_helpers_game_run_reports_an_unknown_build_with_the_form() {
+        let dir = scratch("unknown-play-game");
+        std::fs::create_dir_all(dir.join("bin")).unwrap();
+        std::fs::write(dir.join("bin/DirtRally"), b"some other build").unwrap();
+        let game = dir.display().to_string();
+        let (output, log) = run("unknown-play", &["--no-window", "--linux", "--game", &game]);
+        assert_eq!(output.status.code(), Some(cli::REFUSED));
+        let stderr = text(&output.stderr);
+        assert!(
+            stderr.starts_with("DiRT Rally: This bin/DirtRally"),
+            "{stderr}"
+        );
+        assert!(
+            stderr.contains(&format!(
+                "Report the edition: {}",
+                edition::UNKNOWN_EDITION_ISSUE
+            )),
+            "{stderr}"
+        );
+        let digest = identify::hex(&identify::sha256(b"some other build"));
+        assert!(std::fs::read_to_string(log).unwrap().contains(&digest));
+    }
+
+    #[test]
+    fn no_game_folder_yet_is_reported_with_the_form() {
+        let (output, _) = run("no-game", &["--no-window", "--linux"]);
+        assert_eq!(output.status.code(), Some(cli::REFUSED));
+        let stderr = text(&output.stderr);
+        assert!(stderr.contains("No game folder yet"), "{stderr}");
+        assert!(stderr.contains(edition::UNKNOWN_EDITION_ISSUE), "{stderr}");
+    }
+
     #[test]
     fn settings_only_says_no_window_is_possible_yet() {
         let (output, _) = run("settings", &["--settings", "--linux"]);
