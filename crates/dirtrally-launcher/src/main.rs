@@ -42,6 +42,16 @@ mod linux {
         )
     }
 
+    // Waiting for rea-launcher-sdk v0.4.0 (not in v0.3.3):
+    // - Errors reach only stderr and launcher.log, so a double-clicked
+    //   AppImage with a missing or unknown game exits silently. The SDK's
+    //   egui error window goes in the two `Err` arms of `run` below, for
+    //   every mode but `--help`/`--check`/`--no-window` from a terminal and
+    //   never for `--settings --linux` (the helper reports exit codes).
+    // - Only dirtrally-play/the AppImage hold a lock; the binary run on its
+    //   own can start a second game. The SDK's unix single-instance lock is
+    //   taken in `run_mode` right after `Mode::Help` (before the window),
+    //   held until `spawn` returns, with an "already running" message.
     pub fn run() -> i32 {
         if let Err(error) = start::checked_home(std::env::var_os("HOME")) {
             eprintln!("{error}");
