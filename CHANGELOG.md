@@ -5,14 +5,35 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
 
 ## [Unreleased]
 
+### Added
+
+- If the launcher can't start the game (no game folder chosen, no DiRT
+  Rally in it, or a build it doesn't know), it now says so in a small
+  window, even when you started it from the menu or the AppImage. The
+  window has a "Report the edition" button for the unknown-build form and
+  a "Copy details" button for bug reports. It used to close without a
+  word and leave the reason in `launcher.log`.
+- Only one launcher runs at a time. A second start while the game or the
+  settings window is open starts nothing, says why and exits with code 5.
+
 ### Changed
 
+- Updated rea-launcher-sdk to v0.4.1.
+- `dirtrally-play --play` (and a plain start) while the game is running
+  now exits with code 5, not 0, so a script or a shortcut doesn't mistake
+  it for a game that ran.
+- The copy progress counts what this start copies. On a later start that
+  copies only a few changed files, the bar shows those files, not the
+  whole game.
 - A runtime folder with a `:` in its name (which Linux cannot put in a
   library search path) is refused before the private copy is made, not
   after copying the whole game.
 
 ### Fixed
 
+- **A hand-written `look = steam_deck`** (or `--play --look steam_deck`)
+  now opens gamescope at 1280x800. Before, the game ran at 1280x800 in a
+  gamescope the size of the screen.
 - **Original look on a large screen:** gamescope now opens at your
   screen's size, so Feral's pre-game window offers your screen's sizes;
   it used to open at 1920x1080 on any screen.
@@ -26,7 +47,11 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
   and a few option combinations the start plan: the `preferences` values,
   the game's environment, Feral's controller list and the Linux helper's
   gamescope command line. `start::plan` is the one place a start is
-  decided.
+  decided. They compare through the SDK's `rea_launcher::snapshots!`.
+- The settings window reads pads through the SDK's joystick reader, and
+  the copy progress comes from the SDK's sync; the launcher's own copies
+  of both are gone. `sdk/scripts/launcher-check` passes, with the owner's
+  DRM decision recorded in `.rea-check-waivers`.
 
 ## [0.1.0] - 2026-11-02
 

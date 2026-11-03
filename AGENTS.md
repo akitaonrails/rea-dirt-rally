@@ -3,7 +3,7 @@
 This repository makes the player's own copy of **DiRT Rally** run on modern
 Windows and Linux (Proton/Wine, AppImage) with a settings window, sensible
 defaults and no manual steps. It is built on
-[rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk) v0.3.3.
+[rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk) v0.4.1.
 
 **Read `sdk/docs/STANDARDS.md` before any work; the playbooks are in
 `sdk/docs/playbooks/`** (vendored from the SDK at the tag in `sdk/VERSION`).
@@ -31,7 +31,8 @@ game in a test" (under "Testing").
 |---|---|
 | `crates/dirtrally-launcher/src/edition.rs` | Known builds (SHA-256), the unknown-edition refusal |
 | `crates/dirtrally-launcher/src/config.rs` | The option table: `launcher.cfg`, flags, `--help`, template, looks |
-| `crates/dirtrally-launcher/src/cli.rs` | Modes (`--settings`, `--no-window`, `--check`, `--help`), exit codes |
+| `crates/dirtrally-launcher/src/cli.rs` | Modes (`--settings`, `--no-window`, `--check`, `--help`), exit codes, who sees a message (`Invocation::audience`, the SDK's rule) |
+| `crates/dirtrally-launcher/src/report.rs` | The native build's error and "already running" messages for the SDK's message window |
 | `crates/dirtrally-launcher/src/form.rs`, `ui.rs`, `palette.rs` | The settings window and its headless tests |
 | `crates/dirtrally-launcher/src/runtime.rs` | The runtime copy's `Policy` |
 | `crates/dirtrally-launcher/src/start.rs` | `start::plan` (one start, before any file is touched), Linux folders, `preferences`, pads |
@@ -54,6 +55,7 @@ for t in linux/tests/*.sh packaging/tests/*.sh; do sh "$t"; done
 ../rea-launcher-sdk/scripts/sdk-sync --check .
 cargo build --release --locked --target i686-pc-windows-gnu
 sdk/scripts/wine-test --locked --workspace     # Windows-target tests under Wine, headless
+sdk/scripts/launcher-check                     # the family's rules: no errors
 ```
 
 MinGW, lld and Wine may live in the `gaming` distrobox: run the last two as

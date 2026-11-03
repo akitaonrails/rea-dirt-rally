@@ -103,7 +103,7 @@ changed. Then the game starts fullscreen at your screen's size.
 
 ```sh
 linux/dirtrally-play --play
-linux/dirtrally-play --play --game "/path/to/DiRT Rally"   # no window at all
+linux/dirtrally-play --play --game "/path/to/DiRT Rally"   # no settings window
 ```
 
 If gamescope lives in a distrobox, run it through the box (your settings
@@ -179,7 +179,11 @@ checks your game folder without starting anything.
 - **"There is no DiRT Rally in …"**: choose the folder that holds
   `bin/DirtRally`, or the one just above it.
 - **"This … is not a build this launcher knows"**: see **What you need**;
-  report the code it shows.
+  report the code it shows (the message's **Report the edition** button
+  opens the form; **Copy details** copies what to paste).
+- **"The game or its launcher is already running"**: the game, or the
+  settings window, is still open, so nothing was started. Close it, or run
+  `linux/dirtrally-play stop`.
 - **The game opens on the wrong monitor, or rotated**: use gamescope (see
   **First run**), or set `resolution` to your main monitor's size.
 - **The pad does nothing in the game**: turn it on, then choose
