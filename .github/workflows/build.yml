@@ -57,6 +57,8 @@ jobs:
       audit: false
       sdk-check: false
       shell-tests: ""
+      conformance: false
+      secret-scan: false
 
   release:
     name: Publish tagged release
