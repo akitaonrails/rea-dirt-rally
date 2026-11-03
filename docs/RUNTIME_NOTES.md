@@ -195,3 +195,11 @@ in place (read-only).
   under `$HOME`.
 - After the fixes: the packaged launcher started the game to its title
   screen from the existing copy; SIGTERM ended it with status 0.
+
+## Pending checks (code changed after v0.1.0)
+
+- Original look through the helper on a 4K screen: gamescope now opens at
+  3840x2160 (was 1920x1080). Check that Feral's pre-game window offers 4K
+  and that the game then fills the screen.
+- `dirtrally-play --play --resolution 1280x720`: gamescope opens at
+  1280x720 for that run.

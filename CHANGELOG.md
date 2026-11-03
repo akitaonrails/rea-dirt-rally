@@ -11,6 +11,14 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
   library search path) is refused before the private copy is made, not
   after copying the whole game.
 
+### Fixed
+
+- **Original look on a large screen:** gamescope now opens at your
+  screen's size, so Feral's pre-game window offers your screen's sizes;
+  it used to open at 1920x1080 on any screen.
+- `dirtrally-play --play --resolution 1280x720` now sizes gamescope for
+  that run too, not only the game.
+
 ### Internal
 
 - Golden snapshots (`crates/dirtrally-launcher/tests/snapshots.rs`) of

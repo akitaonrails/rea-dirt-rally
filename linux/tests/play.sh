@@ -97,5 +97,33 @@ got=$(REA_FUNCTIONS_ONLY=1 REA_PLAY_HERE=$T/repo/linux sh -c '
   echo "mode=$REA_MODE app=$REA_APP exe=$REA_EXE state=$REA_STATE"' sh "$T/repo/linux/dirtrally-play")
 check "configuration" "$got" "mode=native app=dirtrally-launcher exe=$T/repo/DiRTRallyLauncher state=$T/.config/dirtrally-launcher"
 
+echo "# gamescope's size follows the game's (gamescope installed, 3840x2160 screen)"
+cat > "$T/rec" <<'REC'
+#!/bin/sh
+echo "$*"
+REC
+chmod +x "$T/rec"
+# size CFG [ARGS...]: the "starting at" line of a --play run.
+size() {
+  _cfg=$1; shift
+  mkdir -p "$T/.config/dirtrally-launcher"
+  printf '%s\n' "$_cfg" > "$T/.config/dirtrally-launcher/launcher.cfg"
+  DIRTRALLY_LAUNCHER=$T/pkg/DiRTRallyLauncher DIRTRALLY_SCREEN=3840x2160 \
+  REA_FUNCTIONS_ONLY=1 REA_PLAY_HERE=$T/pkg/linux sh -c '
+    . "$1"; shift
+    REA_TEST=1 REA_GAMESCOPE_CHECK=true REA_LAUNCH_CMD=$T/rec
+    rea_start "$@"' sh "$T/pkg/linux/dirtrally-play" "$@" | sed -n 's/^starting at \([0-9x]*\),.*/\1/p'
+}
+check "fullscreen: the screen's size" "$(size 'resolution = fullscreen')" 3840x2160
+check "a size: that size" "$(size 'resolution = 2560x1440')" 2560x1440
+check "original: the screen's size (Feral's window offers the screen's modes)" \
+  "$(size 'resolution = original')" 3840x2160
+check "--resolution for one run sizes gamescope too" \
+  "$(size 'resolution = fullscreen' --resolution 1280x720)" 1280x720
+check "--resolution=WxH spelling too" \
+  "$(size 'resolution = fullscreen' --resolution=1600x900)" 1600x900
+check "a switch before it takes no value" \
+  "$(size 'resolution = fullscreen' --no-window --resolution 1280x720)" 1280x720
+
 [ "$fails" -eq 0 ] || { echo "$fails failed"; exit 1; }
 echo "all passed"

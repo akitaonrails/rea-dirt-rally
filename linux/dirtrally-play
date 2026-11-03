@@ -75,7 +75,16 @@ fi
 # gamescope: the game runs fullscreen at the screen's size.
 REA_FULLSCREEN_SIZE=screen
 REA_SCREEN=${DIRTRALLY_SCREEN:-}
+# `--play --resolution WxH` sizes gamescope for that run, as the launcher
+# sizes the game.
+REA_HELPER_KEYS=resolution
 REA_FLAG_SWITCHES="--no-window --settings --linux --check --help"
+
+# Original: Feral's own window chooses the size, so gamescope is the
+# screen, as the game saw it when it shipped (not the 1920x1080 default).
+rea_hook_before_start() {
+  REA_ORIGINAL_SIZE=$(rea_screen_size) || REA_ORIGINAL_SIZE=
+}
 
 rea_hook_command() {
   case "${1:-}" in
