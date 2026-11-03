@@ -5,6 +5,8 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-03
+
 ### Added
 
 - If the launcher can't start the game (no game folder chosen, no DiRT
