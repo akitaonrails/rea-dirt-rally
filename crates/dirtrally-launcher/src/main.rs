@@ -43,6 +43,10 @@ mod linux {
     }
 
     pub fn run() -> i32 {
+        if let Err(error) = start::checked_home(std::env::var_os("HOME")) {
+            eprintln!("{error}");
+            return cli::REFUSED;
+        }
         let places = places();
         let log = Log::new(places.config.join("launcher.log"));
         log.line(concat!("DiRTRallyLauncher ", env!("CARGO_PKG_VERSION")));
@@ -110,10 +114,10 @@ mod linux {
             return Ok(cli::OK);
         }
 
-        let runtime_dir = settings
-            .runtime
-            .clone()
-            .unwrap_or_else(|| places.runtime.clone());
+        let runtime_dir = settings.runtime.as_deref().map_or_else(
+            || places.runtime.clone(),
+            |path| start::resolve_runtime(path, &home(), &cwd),
+        );
         let report = runtime::prepare(&found.root, &runtime_dir)?;
         for warning in &report.warnings {
             log.line(&format!("warning: {warning}"));
@@ -355,10 +359,13 @@ mod app {
             return Ok(cli::OK);
         }
 
-        let runtime_dir = settings
-            .runtime
-            .clone()
-            .unwrap_or_else(|| home().join("runtime"));
+        let profile = std::env::var_os("USERPROFILE")
+            .map(PathBuf::from)
+            .unwrap_or_default();
+        let runtime_dir = settings.runtime.as_deref().map_or_else(
+            || home().join("runtime"),
+            |path| dirtrally_launcher::start::resolve_runtime(path, &profile, &cwd),
+        );
         let report = runtime::prepare(&game, &runtime_dir)?;
         for warning in &report.warnings {
             out.warn(warning);

@@ -16,7 +16,7 @@ if [ "${1:-}" = --no-appimage ]; then appimage='' && shift; fi
 [ $# -eq 1 ] || { echo "usage: $0 [--no-appimage] <package-folder>" >&2; exit 2; }
 pkg=$1
 name=$(basename "$pkg")
-case $name in '' | *[!A-Za-z0-9._-]*) echo "package: bad package name '$name'" >&2; exit 2 ;; esac
+case $name in '' | .* | *[!A-Za-z0-9._-]*) echo "package: bad package name '$name'" >&2; exit 2 ;; esac
 dist=$(dirname "$pkg")
 release=${REA_RELEASE_DIR:-$ROOT/target/release}
 for f in DiRTRallyLauncher libdirtrally_exec_read.so; do
@@ -65,6 +65,7 @@ for pin in $pins; do
     *.zst) unz="zstd -dc" ;;
     *) unz=cat ;;
   esac
+  [ "$unz" = cat ] || command -v "${unz%% *}" >/dev/null || { echo "package: ${unz%% *} is needed to unpack $pin" >&2; exit 1; }
   (cd "$unpack" && ar p "$deb" "$data" | $unz | tar -x -f - --wildcards \
     './lib/x86_64-linux-gnu/*.so.*' './usr/lib/x86_64-linux-gnu/*.so.*' './usr/share/doc/*/copyright' 2>/dev/null || true)
   found=0
@@ -73,6 +74,9 @@ for pin in $pins; do
     # Keep the soname the game asks for: the file the symlinks point at,
     # under the name of the link (libssl.so.1.0.0, libidn.so.11, ...).
     if [ -L "$lib" ]; then
+      # Only a link that stays inside the unpacked package.
+      real=$(readlink -f "$lib")
+      case $real in "$(readlink -f "$unpack")"/*) ;; *) echo "package: $pin: $(basename "$lib") points outside the package" >&2; exit 1 ;; esac
       cp -L "$lib" "$pkg/game-libs/compat/$(basename "$lib")"
     elif ! ls "$pkg/game-libs/compat/$(basename "$lib")" >/dev/null 2>&1; then
       cp "$lib" "$pkg/game-libs/compat/"
@@ -89,7 +93,7 @@ done
 # nobody asked for.
 keep=$ROOT/packaging/compat-libs.txt
 for lib in "$pkg"/game-libs/compat/*; do
-  grep -qx "$(basename "$lib")" "$keep" || rm -f "$lib"
+  grep -qxF "$(basename "$lib")" "$keep" || rm -f "$lib"
 done
 while read -r so; do
   case $so in '' | '#'*) continue ;; esac

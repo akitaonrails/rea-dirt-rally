@@ -171,7 +171,7 @@ checks your game folder without starting anything.
 |---|---|
 | Launcher settings and log | `~/.config/dirtrally-launcher/` (`launcher.cfg`, `launcher.log`, `play.log`; `known-pads.json` lists the pads it has seen, delete it to forget them) |
 | Private copy of the game | `~/.local/share/dirtrally-launcher/runtime` |
-| The game's settings | `~/.local/share/feral-interactive/DiRT Rally/` |
+| The game's settings | `~/.local/share/feral-interactive/DiRT Rally/` (`preferences.before-launcher` there is the game's own file as it was before the launcher first changed it) |
 | Your saves (profile, career) | where your copy of the game keeps them; the copies tested here use `~/.local/share/Steam/ACTiVATED/310560/remote/` |
 
 ## Troubleshooting

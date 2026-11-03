@@ -59,6 +59,40 @@ pub fn places(home: &Path, config_home: Option<OsString>, data_home: Option<OsSt
     }
 }
 
+/// A `runtime` setting as a folder: `~`, `~/…` (and `~\…` on Windows)
+/// are the player's home, a relative path is taken from `cwd`, and an
+/// absolute one (`/data/rt`, `C:\Games\rt`, `\\server\share\rt`) is kept.
+pub fn resolve_runtime(path: &Path, home: &Path, cwd: &Path) -> PathBuf {
+    let text = path.to_string_lossy();
+    if text == "~" {
+        return home.to_path_buf();
+    }
+    let tilde = text
+        .strip_prefix("~/")
+        .or_else(|| cfg!(windows).then(|| text.strip_prefix("~\\")).flatten());
+    if let Some(rest) = tilde {
+        return home.join(rest);
+    }
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        cwd.join(path)
+    }
+}
+
+/// The player's home folder, which must be an absolute path: everything
+/// the launcher and the game write is under it.
+pub fn checked_home(home: Option<std::ffi::OsString>) -> Result<PathBuf, String> {
+    match home.map(PathBuf::from) {
+        Some(home) if home.is_absolute() => Ok(home),
+        _ => Err(
+            "HOME is not set to a folder, so the launcher cannot tell where your \
+                  settings and saves belong. Start it from your desktop or a normal terminal."
+                .to_owned(),
+        ),
+    }
+}
+
 /// What the package ships for the game: from [`GAME_LIBS_ENV`], else
 /// `game-libs` beside `exe`.
 pub fn package(exe: &Path, game_libs: Option<OsString>) -> Package {
@@ -86,6 +120,10 @@ pub fn check_package(package: &Package) -> Result<(), String> {
         package.compat.display()
     ))
 }
+
+/// The game's `preferences` as they were before the launcher first changed
+/// them, beside them (made once, never overwritten).
+pub const PREFS_BACKUP: &str = "preferences.before-launcher";
 
 /// Marks, in the launcher's config folder, that the launcher hid Feral's
 /// pre-game window: going back to the Original look brings it back once.
@@ -126,7 +164,13 @@ pub fn screen_from_xrandr(output: &str) -> Option<(u32, u32)> {
 pub fn write_prefs(home: &Path, config: &Path, start: prefs::Start) -> Result<PathBuf, String> {
     let path = plan::prefs_dir(home).join("preferences");
     let existing = match std::fs::read(&path) {
-        Ok(bytes) => Some(String::from_utf8_lossy(&bytes).into_owned()),
+        Ok(bytes) => Some(String::from_utf8(bytes).map_err(|_| {
+            format!(
+                "{} is not the text file the launcher expects, so it was left as it is. \
+                 Move it away (the game makes a new one) and start again.",
+                path.display()
+            )
+        })?),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
         Err(error) => return Err(format!("Cannot read {}: {error}", path.display())),
     };
@@ -137,13 +181,19 @@ pub fn write_prefs(home: &Path, config: &Path, start: prefs::Start) -> Result<Pa
             std::fs::create_dir_all(dir)
                 .map_err(|error| format!("Cannot create {}: {error}", dir.display()))?;
         }
+        // The game's own file as it was before the launcher first changed it.
+        let backup = path.with_file_name(PREFS_BACKUP);
+        if existing.is_some() && !backup.exists() {
+            fsx::install_copy(&path, &backup)
+                .map_err(|error| format!("Cannot back up {}: {error}", path.display()))?;
+        }
         fsx::write_atomic(&path, &text)
             .map_err(|error| format!("Cannot save {}: {error}", path.display()))?;
     }
     let marker = config.join(HIDDEN_MARKER);
     let result = match start {
         prefs::Start::Direct { .. } => {
-            std::fs::create_dir_all(config).and_then(|()| std::fs::write(&marker, b""))
+            std::fs::create_dir_all(config).and_then(|()| fsx::write_atomic(&marker, b""))
         }
         prefs::Start::FeralWindow { .. } => match std::fs::remove_file(&marker) {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
@@ -241,6 +291,17 @@ mod tests {
         // A relative XDG value is ignored, as the spec says.
         let p = places(home, Some("relative".into()), Some("".into()));
         assert_eq!(p.config, Path::new("/home/José/.config/dirtrally-launcher"));
+    }
+
+    #[test]
+    fn a_missing_or_relative_home_is_refused() {
+        assert!(checked_home(None).unwrap_err().contains("HOME"));
+        assert!(checked_home(Some("".into())).is_err());
+        assert!(checked_home(Some("relative".into())).is_err());
+        assert_eq!(
+            checked_home(Some("/home/a".into())).unwrap(),
+            Path::new("/home/a")
+        );
     }
 
     #[test]
@@ -396,6 +457,8 @@ mod tests {
         fs::write(&path, &played).unwrap();
         write_prefs(&home, &config, direct).unwrap();
         assert_eq!(fs::read_to_string(&path).unwrap(), played);
+        // A seeded file has no backup; the first change to the game's own does.
+        assert!(!path.with_file_name(PREFS_BACKUP).exists());
         // Back to Original: the window returns once and the marker goes.
         let original = start_for(
             Some(Resolution::Original),
@@ -409,6 +472,88 @@ mod tests {
             "{text}"
         );
         assert!(!config.join(HIDDEN_MARKER).exists());
+        // That change kept the game's file as it was, once.
+        let backup = fs::read_to_string(path.with_file_name(PREFS_BACKUP)).unwrap();
+        assert_eq!(backup, played);
+        write_prefs(&home, &config, direct).unwrap();
+        assert_eq!(
+            fs::read_to_string(path.with_file_name(PREFS_BACKUP)).unwrap(),
+            played
+        );
         fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn preferences_that_are_not_text_are_left_alone() {
+        let root = std::env::temp_dir().join(format!("dirtrally-prefs-bin-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let home = root.join("home");
+        let path = plan::prefs_dir(&home).join("preferences");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, b"<registry>\xff\xfe</registry>").unwrap();
+        let error = write_prefs(
+            &home,
+            &root.join("config"),
+            prefs::Start::Direct {
+                width: 1,
+                height: 1,
+            },
+        )
+        .unwrap_err();
+        assert!(error.contains("left as it is"), "{error}");
+        assert_eq!(fs::read(&path).unwrap(), b"<registry>\xff\xfe</registry>");
+        fs::remove_dir_all(&root).unwrap();
+    }
+}
+
+/// Runs on both targets (the host and, under `sdk/scripts/wine-test`, Windows).
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn a_runtime_setting_with_a_tilde_or_relative_path_becomes_a_full_path() {
+        let (home, cwd) = (Path::new("/home/José"), Path::new("/opt/launcher"));
+        assert_eq!(
+            resolve_runtime(Path::new("~/Games/rt"), home, cwd),
+            Path::new("/home/José/Games/rt")
+        );
+        assert_eq!(resolve_runtime(Path::new("~"), home, cwd), home);
+        assert_eq!(
+            resolve_runtime(Path::new("rt"), home, cwd),
+            Path::new("/opt/launcher/rt")
+        );
+        assert_eq!(
+            resolve_runtime(Path::new("/data/rt"), home, cwd),
+            Path::new("/data/rt")
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_runtime_settings_become_full_paths() {
+        let (home, cwd) = (Path::new(r"C:\Users\José"), Path::new(r"D:\Launcher"));
+        assert_eq!(
+            resolve_runtime(Path::new(r"~\Jogos d'Ação\rt"), home, cwd),
+            Path::new(r"C:\Users\José\Jogos d'Ação\rt")
+        );
+        assert_eq!(
+            resolve_runtime(Path::new("~/rt"), home, cwd),
+            Path::new(r"C:\Users\José\rt")
+        );
+        assert_eq!(resolve_runtime(Path::new("~"), home, cwd), home);
+        assert_eq!(
+            resolve_runtime(Path::new("rt"), home, cwd),
+            Path::new(r"D:\Launcher\rt")
+        );
+        assert_eq!(
+            resolve_runtime(Path::new(r"E:\Games\rt"), home, cwd),
+            Path::new(r"E:\Games\rt")
+        );
+        assert_eq!(
+            resolve_runtime(Path::new(r"\\nas\games\rt"), home, cwd),
+            Path::new(r"\\nas\games\rt")
+        );
     }
 }

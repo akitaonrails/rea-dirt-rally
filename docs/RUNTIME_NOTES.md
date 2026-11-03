@@ -177,5 +177,21 @@ in place (read-only).
 - Through the helper: the window opened, Enter pressed Play, the copy was
   already up to date, the window closed and the game started to its title
   screen; `stop` ended the session, nothing left running.
-- Not yet: the window seen on a real desktop by a person, the folder picker
-  (zenity/kdialog) clicked by hand, a pad driving the window.
+- Owner, desktop (gamescope from the gaming box): the window works as
+  expected, including starting the game.
+
+## 2026-11-02: before the first release
+
+- Independent review; fixed: relative/`~` runtime paths, a non-empty
+  foreign runtime folder, preferences that are not UTF-8 (now left alone,
+  and backed up once before the first change), an empty `HOME`, an empty
+  controller list, `DIRTRALLY_RUN` with spaces in `HOME`, `package.sh`
+  dot names, link targets and literal soname matching. Windows path forms
+  (`C:\\`, `~\\`, `\\\\server\\share`) tested under Wine.
+- The game never wrote under `share/` in any session here: after many runs
+  (benchmark, title screen, the owner's play) the only file newer than the
+  copy's manifest under `share/` is the launcher's own `inputdevices.json`.
+  The game writes `bin/libpdf.so/` (copied, not linked) and its settings
+  under `$HOME`.
+- After the fixes: the packaged launcher started the game to its title
+  screen from the existing copy; SIGTERM ended it with status 0.

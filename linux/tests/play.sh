@@ -85,6 +85,12 @@ contains "and their config folder" "$boxed" "XDG_CONFIG_HOME=$T/.config"
 contains "and their data folder" "$boxed" "XDG_DATA_HOME=$T/.local/share"
 contains "the launcher ran" "$(cat "$T/ran" 2>/dev/null)" "--no-window"
 
+spaced="$T/Ana Maria"
+mkdir -p "$spaced"
+out=$(HOME="$spaced" XDG_CONFIG_HOME= XDG_DATA_HOME= DIRTRALLY_RUN="$T/box" sh "$T/pkg/linux/dirtrally-play" --play 2>&1); rc=$?
+check "a HOME with a space is refused with the wrapper: exit 1" "$rc" 1
+contains "and says why" "$out" "has spaces or wildcards"
+
 echo "# tests source the script: REA_FUNCTIONS_ONLY=1 + REA_PLAY_HERE"
 got=$(REA_FUNCTIONS_ONLY=1 REA_PLAY_HERE=$T/repo/linux sh -c '
   . "$1"

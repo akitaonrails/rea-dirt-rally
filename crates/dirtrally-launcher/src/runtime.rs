@@ -55,7 +55,33 @@ pub const INPUT_DEVICES: &str = "share/inputdevices.json";
 /// Brings the game folder into `runtime`, which may never overlap it.
 pub fn prepare(game: &Path, runtime: &Path) -> Result<SyncReport, String> {
     paths::check_separate(game, runtime)?;
+    check_ours(runtime)?;
     sync(game, runtime).map_err(|error| format!("Cannot prepare {}: {error}", runtime.display()))
+}
+
+/// Marks a runtime folder as the launcher's from the moment its first copy
+/// starts, so a copy stopped half way is still recognised.
+pub const OWNED_MARKER: &str = ".dirtrally-runtime";
+
+/// The runtime folder is new, empty, or one the launcher made (it holds
+/// [`OWNED_MARKER`] or [`MANIFEST`]): never a folder of someone else's files
+/// that the copy would overwrite. A new or empty folder gets the marker.
+fn check_ours(runtime: &Path) -> Result<(), String> {
+    if runtime.join(OWNED_MARKER).is_file() || runtime.join(MANIFEST).is_file() {
+        return Ok(());
+    }
+    let empty = std::fs::read_dir(runtime).map_or(true, |mut entries| entries.next().is_none());
+    if empty {
+        std::fs::create_dir_all(runtime)
+            .and_then(|()| rea_launcher::fsx::write_atomic(&runtime.join(OWNED_MARKER), b""))
+            .map_err(|error| format!("Cannot prepare {}: {error}", runtime.display()))?;
+        return Ok(());
+    }
+    Err(format!(
+        "The folder {} already has other files in it. Choose an empty folder (or a new one) \
+         for the launcher's private copy of the game.",
+        runtime.display()
+    ))
 }
 
 fn sync(game: &Path, runtime: &Path) -> io::Result<SyncReport> {
@@ -141,6 +167,20 @@ mod tests {
         assert_eq!(prepare(&game, &rt).unwrap().brought, 0);
         assert!(rt.join("bin/libpdf.so").is_dir());
         assert!(!game.join("bin/libpdf.so").exists());
+
+        // A copy stopped half way (marker, no manifest yet) is carried on.
+        let half = root.join("half");
+        prepare(&game, &half).unwrap();
+        fs::remove_file(half.join(MANIFEST)).unwrap();
+        assert!(prepare(&game, &half).is_ok());
+
+        // A folder of someone else's files is refused; ours is fine.
+        let other = root.join("Documents");
+        fs::create_dir_all(&other).unwrap();
+        fs::write(other.join("notes.txt"), b"mine").unwrap();
+        let error = prepare(&game, &other).unwrap_err();
+        assert!(error.contains("already has other files"), "{error}");
+        assert_eq!(fs::read(other.join("notes.txt")).unwrap(), b"mine");
 
         // A runtime inside the game folder is refused.
         assert!(prepare(&game, &game.join("runtime")).is_err());

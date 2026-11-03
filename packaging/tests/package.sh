@@ -53,6 +53,14 @@ if REA_RELEASE_DIR=$T/release REA_COMPAT_DIR=$T/compat sh "$ROOT/packaging/packa
 else
   ok "a missing library fails: $(grep -o 'libssl.so.1.0.0 missing' "$T/out")"
 fi
+for bad in .. . .hidden; do
+  if REA_RELEASE_DIR=$T/release REA_COMPAT_DIR=$T/compat sh "$ROOT/packaging/package.sh" --no-appimage "$T/dist/$bad" > /dev/null 2>&1; then
+    fail "the package name '$bad' must be refused"
+  else
+    ok "the package name '$bad' is refused"
+  fi
+done
+[ -d "$T/release" ] && ok "nothing outside the package folder was removed" || fail "package.sh removed $T/release"
 if REA_RELEASE_DIR=$T/nowhere sh "$ROOT/packaging/package.sh" --no-appimage "$T/dist/x" > /dev/null 2>&1; then
   fail "a missing program must fail"
 else

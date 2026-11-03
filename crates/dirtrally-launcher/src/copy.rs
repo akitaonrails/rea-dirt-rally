@@ -153,8 +153,9 @@ mod tests {
         fs::write(game.join("share/data/game.bin"), vec![2u8; 700]).unwrap();
         let listing = sdk_runtime::list(&game).unwrap();
         assert_eq!(bytes_present(&rt, &listing), 0);
-        // A half-written file does not count.
+        // A half-written file does not count (a copy that was stopped).
         fs::create_dir_all(rt.join("bin")).unwrap();
+        fs::write(rt.join(runtime::OWNED_MARKER), b"").unwrap();
         fs::write(rt.join("bin/DirtRally"), vec![1u8; 100]).unwrap();
         assert_eq!(bytes_present(&rt, &listing), 0);
 

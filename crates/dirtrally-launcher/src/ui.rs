@@ -513,12 +513,15 @@ mod app {
             let Check::Found(_, root) = &self.window.check else {
                 return;
             };
-            let runtime = self
-                .window
-                .form
-                .settings()
-                .runtime
-                .unwrap_or_else(|| self.runtime_default.clone());
+            let home_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+            let home = std::env::var_os(home_var)
+                .map(PathBuf::from)
+                .unwrap_or_default();
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let runtime = self.window.form.settings().runtime.as_deref().map_or_else(
+                || self.runtime_default.clone(),
+                |path| crate::start::resolve_runtime(path, &home, &cwd),
+            );
             self.window.error = None;
             self.window.copy = Some(copy::State::Copying { done: 0, total: 0 });
             self.job = Some(CopyJob::start(root.clone(), runtime));

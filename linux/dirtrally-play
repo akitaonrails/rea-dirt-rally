@@ -59,7 +59,17 @@ REA_WAIT=${DIRTRALLY_WAIT:-}
 # saves stay where they are without the wrapper.
 REA_RUN=${DIRTRALLY_RUN:-}
 if [ -n "$REA_RUN" ]; then
-  REA_RUN="$REA_RUN env HOME=$HOME XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config} XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}"
+  _cfg=${XDG_CONFIG_HOME:-$HOME/.config} _data=${XDG_DATA_HOME:-$HOME/.local/share}
+  # REA_RUN is split into words, so these folders cannot hold spaces or
+  # wildcards there.
+  for _p in "$HOME" "$_cfg" "$_data"; do
+    case $_p in
+      *[[:space:]]* | *[\*?[]*)
+        echo "dirtrally-play: DIRTRALLY_RUN cannot be used while '$_p' has spaces or wildcards in its name; install gamescope next to the launcher instead." >&2
+        exit 1 ;;
+    esac
+  done
+  REA_RUN="$REA_RUN env HOME=$HOME XDG_CONFIG_HOME=$_cfg XDG_DATA_HOME=$_data"
 fi
 [ -n "${DIRTRALLY_GPU+set}" ] && REA_GPU=$DIRTRALLY_GPU   # DIRTRALLY_GPU= for no GPU choice
 # gamescope: the game runs fullscreen at the screen's size.

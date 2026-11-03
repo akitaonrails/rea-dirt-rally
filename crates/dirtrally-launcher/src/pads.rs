@@ -204,9 +204,14 @@ pub fn input_devices(original: &str, entries: &[serde_json::Value]) -> Result<St
         .rfind(']')
         .ok_or("inputdevices.json: no closing ]")?;
     let mut out = original[..close].trim_end().to_owned();
-    for entry in &added {
+    for (i, entry) in added.iter().enumerate() {
         let text = serde_json::to_string_pretty(entry).map_err(|error| error.to_string())?;
-        out.push_str(",\n    ");
+        // No comma before the first entry of an empty list.
+        out.push_str(if list.is_empty() && i == 0 {
+            "\n    "
+        } else {
+            ",\n    "
+        });
         out.push_str(&text.replace('\n', "\n    "));
     }
     out.push('\n');
@@ -379,6 +384,16 @@ mod tests {
         // A broken remembered entry is dropped, not passed to the game.
         let junk = vec![serde_json::json!({"Name": "?"})];
         assert!(remember(&junk, &[]).is_empty());
+    }
+
+    #[test]
+    fn an_empty_list_stays_valid_json() {
+        for empty in ["[]", "[\n]\n", "[ ]"] {
+            let out = input_devices(empty, &remember(&[], &[eightbitdo()])).unwrap();
+            let list: Vec<serde_json::Value> =
+                serde_json::from_str(&out).unwrap_or_else(|e| panic!("{e}: {out}"));
+            assert_eq!(list.len(), 1);
+        }
     }
 
     #[test]

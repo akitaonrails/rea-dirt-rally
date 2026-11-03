@@ -52,6 +52,12 @@ All notable changes to the DiRT Rally launcher. Versions are git tags
   which makes the first private copy with its progress before the game
   starts. Mouse, keyboard and gamepad (`/dev/input/js*`). Photo: Chris Cox,
   CC BY 2.0.
+- Safer files: the `runtime` setting accepts `~`, `~/…` (`~\\…` on Windows),
+  relative and absolute paths; a runtime folder must be empty or the
+  launcher's own (a copy stopped half way carries on); the game's
+  `preferences` are backed up once (`preferences.before-launcher`) before
+  the first change and left alone when they are not text; the launcher
+  refuses to start without a `HOME`.
 - `dirtrally-play --check` checks the game folder without starting anything.
 - CI builds the native Linux zip and AppImage (Ubuntu 22.04) and runs the
   Windows-target tests under Wine.
