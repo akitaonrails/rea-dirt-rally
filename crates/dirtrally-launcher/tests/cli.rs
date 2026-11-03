@@ -53,8 +53,35 @@ fn modes_follow_the_family_flags() {
         assert_eq!(mode(&[help]), Mode::Help);
     }
     let helper = parse(&["--settings", "--linux"]).unwrap();
-    assert!(helper.linux && !helper.interactive() && !helper.wants_console());
+    assert!(helper.linux && !helper.wants_console());
     assert!(parse(&["--check"]).unwrap().wants_console());
+}
+
+/// Who sees a message comes from the SDK's rule (report::Audience), never
+/// from `--no-window` or `--linux` alone (STANDARDS "Messages reach the
+/// player").
+#[test]
+fn the_player_sees_the_errors_of_the_helpers_game_run() {
+    let watching = |args: &[&str], wine: bool| parse(args).unwrap().audience(wine).interactive;
+    // linux/dirtrally-play and the AppImage start the game run like this,
+    // inside gamescope, for a player in front of the screen.
+    assert!(watching(&["--no-window", "--linux"], false));
+    assert!(watching(&["--no-window", "--linux"], true));
+    assert!(
+        watching(&["--no-window"], true),
+        "under Wine nobody reads stdout"
+    );
+    assert!(watching(&[], false), "a double-clicked launcher");
+    assert!(!watching(&["--no-window"], false), "a script");
+    // The helper's settings window shows its own messages.
+    assert!(!watching(&["--settings", "--linux"], false));
+    assert!(!watching(&["--settings", "--linux"], true));
+    // The helper reads --check's output and exit code itself.
+    assert!(!watching(&["--check", "--linux"], false));
+    let check = parse(&["--check"]).unwrap().audience(false);
+    assert!(check.command && check.interactive);
+    let help = parse(&["--help"]).unwrap().audience(false);
+    assert!(help.command);
 }
 
 #[test]

@@ -236,9 +236,9 @@ mod app {
     use dirtrally_launcher::{runtime, ui};
     use rea_launcher::log::Log;
     use rea_launcher::{cfg, fsx};
-    use rea_launcher_win32::console::{self, Output};
     use rea_launcher_win32::dialog::{self, Icon};
     use rea_launcher_win32::process::Launch;
+    use rea_launcher_win32::report::{self, Mode as Says, Run};
     use rea_launcher_win32::{display, gpu, wine};
 
     const TITLE: &str = "DiRT Rally";
@@ -263,22 +263,31 @@ mod app {
         }
     }
 
-    /// Where messages go: the starting terminal, a dialog when a person
-    /// started it without one, or only `launcher.log`.
+    /// Where messages go: the SDK's `report` decides from the run's
+    /// audience (the terminal, a dialog, or only `launcher.log`).
     struct Out {
         log: Log,
-        attached: bool,
-        interactive: bool,
+        says: Says,
     }
 
     impl Out {
-        fn say(&self, text: &str, icon: Icon) {
-            match console::output(self.attached, console::stdout_usable(), self.interactive) {
-                Output::Terminal if icon == Icon::Info => println!("{text}"),
-                Output::Terminal => eprintln!("{text}"),
-                Output::Dialog => dialog::message(TITLE, text, icon),
-                Output::Nowhere => {}
+        /// A command's result (`--help`, `--check`): the terminal, or a
+        /// dialog when a person started it without one.
+        fn say(&self, text: &str) {
+            let route = report::route_here(self.says);
+            if route.print {
+                println!("{text}");
             }
+            if route.dialog {
+                dialog::message(TITLE, text, Icon::Info);
+            }
+        }
+
+        /// An error the launcher stops on: always in the log, and a dialog
+        /// whenever a person may be watching.
+        fn fail(&self, text: &str) {
+            self.log.line(&format!("error: {text}"));
+            report::fatal(TITLE, text, self.says);
         }
 
         fn warn(&self, message: &str) {
@@ -289,32 +298,32 @@ mod app {
     pub fn run() -> i32 {
         let log = Log::new(home().join("launcher.log"));
         log.line(concat!("DiRTRallyLauncher ", env!("CARGO_PKG_VERSION")));
-        let parsed = cli::parse(std::env::args().skip(1));
-        let (attached, interactive) = match &parsed {
-            Ok(invocation) => (
-                invocation.wants_console() && console::attach_parent(),
-                invocation.interactive(),
-            ),
-            Err(_) => (console::attach_parent(), true),
+        let args: Vec<String> = std::env::args().skip(1).collect();
+        let parsed = cli::parse(args.iter().cloned());
+        let audience = match &parsed {
+            Ok(invocation) => report::audience(invocation.run()),
+            // A bad command line answers like a command: the terminal, or a
+            // dialog when a person started it and sees no terminal.
+            Err(_) => report::audience(Run {
+                command: true,
+                ..Run::from_args(&args, &[])
+            }),
         };
         let out = Out {
             log,
-            attached,
-            interactive,
+            says: audience.mode(),
         };
         let invocation = match parsed {
             Ok(invocation) => invocation,
             Err(error) => {
-                out.log.line(&format!("error: {error}"));
-                out.say(&error, Icon::Error);
+                out.fail(&error);
                 return cli::USAGE_ERROR;
             }
         };
         match run_mode(&out, invocation) {
             Ok(code) => code,
             Err(error) => {
-                out.log.line(&format!("error: {error}"));
-                out.say(&error, Icon::Error);
+                out.fail(&error);
                 cli::REFUSED
             }
         }
@@ -322,7 +331,7 @@ mod app {
 
     fn run_mode(out: &Out, invocation: Invocation) -> Result<i32, String> {
         if invocation.mode == Mode::Help {
-            out.say(&config::usage(), Icon::Info);
+            out.say(&config::usage());
             return Ok(cli::OK);
         }
         let path = settings_path();
@@ -375,7 +384,7 @@ mod app {
             found.exe.display()
         ));
         if invocation.mode == Mode::Check {
-            out.say(&cli::check_report(&found), Icon::Info);
+            out.say(&cli::check_report(&found));
             return Ok(cli::OK);
         }
 
