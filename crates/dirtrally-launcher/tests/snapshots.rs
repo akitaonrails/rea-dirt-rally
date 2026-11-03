@@ -11,39 +11,21 @@
 //! `DIRTRALLY_UPDATE_SNAPSHOTS=1 cargo test --test snapshots`, then read
 //! the diff.
 
-use std::path::PathBuf;
-
 use dirtrally_launcher::config;
 
+/// Compares with `tests/snapshots/<name>` through the SDK's helper: the
+/// crate version is `<version>` there, line endings are LF, and
+/// `DIRTRALLY_UPDATE_SNAPSHOTS=1` (or the SDK's `REA_UPDATE_SNAPSHOTS=1`)
+/// writes instead.
 fn check(name: &str, actual: &str) {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/snapshots")
-        .join(name);
-    if std::env::var_os("DIRTRALLY_UPDATE_SNAPSHOTS").is_some() {
-        std::fs::write(&path, actual).unwrap();
-        return;
-    }
-    let expected = std::fs::read_to_string(&path).unwrap_or_else(|e| {
-        panic!(
-            "{}: {e} (DIRTRALLY_UPDATE_SNAPSHOTS=1 writes it)",
-            path.display()
-        )
-    });
-    // Compared without regard to line endings (a Windows checkout).
-    assert_eq!(
-        expected.replace("\r\n", "\n"),
-        actual,
-        "{name} changed: review the difference, then update it on purpose"
-    );
+    rea_launcher::snapshots!()
+        .update_var("DIRTRALLY_UPDATE_SNAPSHOTS")
+        .assert(name, actual);
 }
 
 #[test]
 fn help_and_first_run_settings() {
-    // The version changes every release; the snapshot keeps a placeholder.
-    check(
-        "help.txt",
-        &format!("{}\n", config::usage()).replace(env!("CARGO_PKG_VERSION"), "<version>"),
-    );
+    check("help.txt", &format!("{}\n", config::usage()));
     check("launcher.cfg", &config::template());
     check(
         "launcher-first-run.cfg",
@@ -61,7 +43,7 @@ fn help_and_first_run_settings() {
 mod linux {
     use super::*;
 
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     use dirtrally_launcher::config::{Look, Settings};
     use dirtrally_launcher::form::Form;
