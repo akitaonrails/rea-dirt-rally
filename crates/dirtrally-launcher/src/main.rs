@@ -266,9 +266,10 @@ mod app {
     use rea_launcher::log::Log;
     use rea_launcher::{cfg, fsx};
     use rea_launcher_win32::dialog::{self, Icon};
+    use rea_launcher_win32::gpu::{self, Glx};
     use rea_launcher_win32::process::Launch;
     use rea_launcher_win32::report::{self, Mode as Says, Run};
-    use rea_launcher_win32::{display, gpu, wine};
+    use rea_launcher_win32::{display, wine};
 
     const TITLE: &str = "DiRT Rally";
 
@@ -365,13 +366,20 @@ mod app {
         }
         let path = settings_path();
         if let Mode::Window { settings_only } = invocation.mode {
-            if wine::is_wine() {
-                match gpu::prefer_glx() {
-                    Ok(true) => out
-                        .log
-                        .line("settings window: OpenGL through GLX (UseEGL=N)"),
-                    Ok(false) => {}
-                    Err(error) => out.warn(&error.to_string()),
+            // Under Wine the window draws through GLX; on a fresh prefix
+            // the launcher runs itself again once so the setting is in
+            // effect for the first window (no instance guard to hand over).
+            match gpu::prefer_glx_or_restart(None) {
+                Glx::Restarted { exit_code } => {
+                    out.log.line(&format!(
+                        "settings window: started again for OpenGL through GLX; it exited with {exit_code}"
+                    ));
+                    return Ok(exit_code as i32);
+                }
+                Glx::Ready { warning, .. } => {
+                    if let Some(warning) = warning {
+                        out.warn(&warning);
+                    }
                 }
             }
             let saved = cfg::read_file(&path).ok().flatten();
