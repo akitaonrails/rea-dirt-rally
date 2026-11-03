@@ -203,3 +203,25 @@ in place (read-only).
   and that the game then fills the screen.
 - `dirtrally-play --play --resolution 1280x720`: gamescope opens at
   1280x720 for that run.
+
+## Pending checks (SDK v0.4.1)
+
+- Error window: the launcher started with no game folder, a folder
+  without the game and an unknown build, from a desktop with no terminal,
+  shows the SDK's message window with "Report the edition" (screenshot,
+  headless); `dirtrally-play --play` with a missing game shows it inside
+  gamescope, and OK ends the run with exit 1.
+- One instance: a second `DiRTRallyLauncher` (window or `--no-window`)
+  while the game runs says it is already running and exits 5; the lock is
+  free again after the game exits, after `dirtrally-play stop` and after
+  Ctrl+C on the helper.
+- Copy progress: the first copy into an empty runtime counts up to the
+  game's size; a later start with the copy up to date goes straight on.
+- Looks: a hand-written `look = steam_deck` without `resolution` starts
+  gamescope at 1280x800; Original, Recommended and Steam Deck each reach
+  the game.
+- Pads in the settings window through the SDK's joystick reader
+  (`pad::joystick`): D-pad moves, A presses, Start plays.
+- Quit paths and leftovers: quit from the game's menu, gamescope closed,
+  SIGINT and SIGTERM to `dirtrally-play`, `dirtrally-play stop`; no game,
+  launcher or gamescope process left behind.
