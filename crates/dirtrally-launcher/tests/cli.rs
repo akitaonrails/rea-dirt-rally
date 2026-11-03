@@ -145,6 +145,9 @@ mod program {
             .env("XDG_CONFIG_HOME", home.join(".config"))
             .env("XDG_DATA_HOME", home.join(".local/share"))
             .env_remove("DIRTRALLY_GAME_LIBS")
+            // Headless: the window can never open on the desktop.
+            .env_remove("DISPLAY")
+            .env_remove("WAYLAND_DISPLAY")
             .output()
             .unwrap();
         (output, home.join(".config/dirtrally-launcher/launcher.log"))

@@ -24,7 +24,7 @@ mod linux {
     use std::process::Command;
 
     use dirtrally_launcher::cli::{self, Invocation, Mode};
-    use dirtrally_launcher::{config, pads, plan, runtime, start};
+    use dirtrally_launcher::{config, pads, plan, runtime, start, ui};
     use rea_launcher::log::Log;
     use rea_launcher::{cfg, fsx};
 
@@ -69,16 +69,22 @@ mod linux {
             println!("{}", config::usage());
             return Ok(cli::OK);
         }
-        // The settings window comes with the window work (docs/RESEARCH.md);
-        // until then the helper plays with the saved settings.
-        if let Mode::Window {
-            settings_only: true,
-        } = invocation.mode
-        {
-            log.line("settings window: not available on Linux yet");
-            return Ok(cli::WINDOW_UNAVAILABLE);
-        }
         let path = places.config.join(config::FILE_NAME);
+        if let Mode::Window { settings_only } = invocation.mode {
+            let saved = cfg::read_file(&path).ok().flatten();
+            match ui::show(&path, saved.as_deref(), invocation.linux, &places.runtime) {
+                Ok(ui::Outcome::Play) if settings_only => return Ok(cli::OK),
+                Ok(ui::Outcome::Play) => {}
+                Ok(ui::Outcome::Closed) if settings_only => return Ok(cli::WINDOW_CLOSED),
+                Ok(ui::Outcome::Closed) => return Ok(cli::OK),
+                Err(error) => {
+                    log.line(&format!("warning: settings window unavailable: {error}"));
+                    if settings_only {
+                        return Ok(cli::WINDOW_UNAVAILABLE);
+                    }
+                }
+            }
+        }
         let existing = cfg::read_file(&path)
             .map_err(|error| format!("Cannot read {}: {error}", path.display()))?;
         let first_run = existing.is_none();
@@ -307,7 +313,12 @@ mod app {
                 }
             }
             let saved = cfg::read_file(&path).ok().flatten();
-            match ui::show(&path, saved.as_deref(), invocation.linux) {
+            match ui::show(
+                &path,
+                saved.as_deref(),
+                invocation.linux,
+                &home().join("runtime"),
+            ) {
                 Ok(ui::Outcome::Play) if settings_only => return Ok(cli::OK),
                 Ok(ui::Outcome::Play) => {}
                 Ok(ui::Outcome::Closed) if settings_only => return Ok(cli::WINDOW_CLOSED),

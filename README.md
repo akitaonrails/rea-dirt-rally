@@ -11,8 +11,8 @@ private copy.
 This project contains no game files: you need your own copy of the game.
 
 > Played end to end on Linux (Arch, NVIDIA, 4K) with an 8BitDo pad, from
-> the zip and the AppImage. Not yet: the settings window, the Steam Deck,
-> and the Windows version of the game. Reports welcome in the
+> the zip and the AppImage. Not yet: the Steam Deck and the Windows version
+> of the game. Reports welcome in the
 > [issues](https://github.com/akitaonrails/rea-dirt-rally/issues).
 
 [![A DiRT Rally stage at 4K through the launcher](https://new-uploads-akitaonrails.s3.us-east-2.amazonaws.com/2026/11/02/dirt-rally-launcher/showcase-poster.jpg)](https://new-uploads-akitaonrails.s3.us-east-2.amazonaws.com/2026/11/02/dirt-rally-launcher/showcase-h264.mp4)
@@ -32,7 +32,10 @@ This project contains no game files: you need your own copy of the game.
 
 ## Screenshots
 
-The settings window is not built yet; its screenshots will be here.
+| Play | Picture |
+|---|---|
+| ![The Play tab: the game folder found, and the three looks with Recommended chosen](docs/images/launcher-play.jpg) | ![The Picture tab: the resolution, and a note that graphics quality is set in the game](docs/images/launcher-picture.jpg) |
+| ![Getting ready: no game folder chosen yet, Play waits](docs/images/launcher-setup.jpg) | ![The first Play: the private copy being made, 2.3 of 43.1 GB](docs/images/launcher-copy.jpg) |
 
 ## What you need
 
@@ -82,28 +85,32 @@ reports are welcome.
 
 ## First run
 
-Tell the launcher where your game is, once:
+Start the launcher (the AppImage, or `linux/dirtrally-play` from the zip)
+with no options. The settings window opens:
 
-```sh
-linux/dirtrally-play --play --game "/path/to/DiRT Rally"
-```
+1. Press **Browse…** and choose your DiRT Rally folder (the one with
+   `bin/DirtRally`, or the folder just above it). The window says which
+   version it found, or why it can't play that folder.
+2. Keep **Recommended**, or choose another look.
+3. Press **Play** (or Enter, or Start on a pad).
 
-It remembers the folder. After that:
+The first Play makes the private copy of the game, with its progress in the
+window. From another disk or a network share that copies about 40 GB and
+takes a while (about 25 minutes from a NAS); later starts copy only what
+changed. Then the game starts fullscreen at your screen's size.
+
+`--play` starts with the saved settings and skips the window:
 
 ```sh
 linux/dirtrally-play --play
+linux/dirtrally-play --play --game "/path/to/DiRT Rally"   # no window at all
 ```
-
-The first start makes the private copy of the game. From another disk or a
-network share that copies about 40 GB and takes a while (about 25 minutes
-from a NAS); later starts copy only what changed. Then the game starts
-fullscreen at your screen's size.
 
 If gamescope lives in a distrobox, run it through the box (your settings
 and saves stay in your own home folder):
 
 ```sh
-DIRTRALLY_RUN="distrobox enter gaming --" linux/dirtrally-play --play
+DIRTRALLY_RUN="distrobox enter gaming --" linux/dirtrally-play
 ```
 
 To quit, use the game's own **Quit**, or run `linux/dirtrally-play stop`
@@ -111,8 +118,18 @@ from another terminal.
 
 ## The settings window
 
-Not built yet. Until then, the options below are set on the command line
-or in `launcher.cfg`.
+- **Play** tab: the game folder (with **Browse…**) and the looks.
+  **Recommended** goes straight into the game at your screen's size,
+  **Steam Deck** does the same at 1280×800, and **Original** opens Feral's
+  own pre-game window first, as the game shipped.
+- **Picture** tab: the resolution. Graphics quality is the game's own; set
+  it in the game's **Options**, under **Graphics**.
+- **Play** saves the settings, makes the private copy the first time, then
+  starts the game. It stays off, with the reason shown, until the launcher
+  has found a version of the game it can play.
+
+Mouse, keyboard and a gamepad all work: the D-pad moves between controls,
+A changes the focused one, LB/RB switch tabs and Start plays.
 
 ## Gamepad
 
@@ -175,8 +192,6 @@ checks your game folder without starting anything.
 
 - The Windows version of the game is not supported yet (it stops while
   loading under Wine).
-- No settings window yet; options are set on the command line or in
-  `launcher.cfg`.
 - Not yet checked: the Steam Deck and wheels.
 - Online features are gone for everyone: RaceNet shut down in 2025, so
   online events, leagues and their achievements no longer work. Offline
@@ -255,6 +270,8 @@ what is specific to DiRT Rally.
   execute-only memory crash and its `mprotect` workaround were found).
 - The Steam Runtime 1 ("scout") packages, for the legacy libraries.
 - gamescope, for the fullscreen session.
+- The window's photo: Kris Meeke at the 2015 Wales Rally GB, by Chris Cox
+  (CC BY 2.0, via Wikimedia Commons).
 - quick-xml and the Rust `libc` crate.
 - [rea-launcher-sdk](https://github.com/akitaonrails/rea-launcher-sdk).
 

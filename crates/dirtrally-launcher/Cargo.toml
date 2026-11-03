@@ -19,8 +19,11 @@ rea-launcher-win32.workspace = true
 quick-xml = "0.41"
 serde_json = "1"
 
-[target.'cfg(windows)'.dependencies]
+# The settings window, on Linux (the supported edition) and Windows.
 rea-launcher-ui.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
 
 # The settings window also builds on the host for its tests: the palette's
 # contrast test and the headless window tests (egui_kittest) run with

@@ -47,7 +47,8 @@ the same versions in the same repository
 
 | File | Author | Licence | Source |
 |---|---|---|---|
-| (the window's hero image, once researched) | | | |
+| `crates/dirtrally-launcher/assets/hero.jpg` (the window's photo: Kris Meeke's Citroën DS3 WRC, 2015 Wales Rally GB; cropped and resized) | Chris Cox | CC BY 2.0, credited in the window | https://commons.wikimedia.org/wiki/File:2015_Wales_Rally_GB_Kris_Meeke.jpg |
+| `docs/images/launcher-*.jpg` (README screenshots of the window, which show the photo above) | this project | MIT OR Apache-2.0 (the photo: as above) | taken headless from the launcher |
 
 ## Owner decisions
 

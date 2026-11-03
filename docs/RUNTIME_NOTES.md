@@ -166,3 +166,16 @@ in place (read-only).
 - Headless gamescope, the AppImage's helper with its own gamescope off:
   `--play` started the game from the private copy to its title screen;
   `stop` ended the session; no game or gamescope processes left.
+
+## 2026-11-02: the settings window (Linux, headless)
+
+- The real window in headless gamescope at 880×640, four states
+  screenshotted (`docs/images/launcher-*.jpg`): no folder (Play off), the
+  Windows copy refused with its reason (Play off), ready, and the first
+  copy into an empty folder ("2.3 of 43.1 GB", bar moving; the partial
+  copy deleted after).
+- Through the helper: the window opened, Enter pressed Play, the copy was
+  already up to date, the window closed and the game started to its title
+  screen; `stop` ended the session, nothing left running.
+- Not yet: the window seen on a real desktop by a person, the folder picker
+  (zenity/kdialog) clicked by hand, a pad driving the window.

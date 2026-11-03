@@ -2,43 +2,47 @@
 //!
 //! [`draw`] is the whole window as a function of [`Window`], so the
 //! headless tests below drive the real widgets (egui_kittest) on the host
-//! and under `sdk/scripts/wine-test`; `show` wraps it in eframe on Windows.
+//! and under `sdk/scripts/wine-test`; `show` wraps it in eframe.
 //!
-//! Layout: the hero image strip on the left, the title and status, the
-//! Play tab (game folder and look cards) and the Picture tab (every other
-//! option row of `config::OPTIONS`), the footer with the Play plate.
+//! Two states share one layout (the hero photo on the left, the title and
+//! status, the tabs, the footer with the Play plate):
+//!
+//! - **Getting ready**: no game folder yet, or one the launcher cannot play
+//!   (the reason, and for an unknown build its SHA-256 and the report
+//!   link). Play stays off until the folder is right.
+//! - **Ready**: the looks, then Play. The first Play makes the private copy
+//!   of the game with its progress in place of the tabs ("12.4 of 40.1 GB"),
+//!   then starts the game. Later starts copy only what changed.
+//!
 //! Any change to the window's look or layout goes through a design skill
 //! (docs/STANDARDS.md "Settings window and CLI").
 
 use std::path::PathBuf;
 
 use rea_launcher::cfg::{OptionSpec, spec};
-use rea_launcher_ui::egui::{self, Align2, Rect, RichText, TextureHandle, pos2, vec2};
+use rea_launcher_ui::egui::{self, Rect, RichText, TextureHandle, pos2, vec2};
 use rea_launcher_ui::spec::{mark_rendered, spec_path_row, spec_row};
 use rea_launcher_ui::theme::{body, condensed};
 use rea_launcher_ui::widgets::{self, Crop, LookCard};
 use rea_launcher_ui::window::Layout;
 
 use crate::config::{Look, OPTIONS};
+use crate::copy;
 use crate::edition;
 use crate::form::Form;
-use crate::palette::{ACCENT, BASE, ERROR, INK, MUTED, PANEL};
+use crate::palette::{BASE, CHALK, ERROR, INK, MUTED, PANEL};
 
 /// Width of the hero image strip.
 pub const PHOTO_W: f32 = 280.0;
 
-/// The hero image (JPEG, a few hundred KB at most). Empty slot for now:
-/// research imagery per docs/STANDARDS.md ("Give the window the game's
-/// identity": freely licensed photos of the real subject first, official
-/// art only with the owner's recorded decision, else an original
-/// illustration; never anything taken out of the game's files). Then put
-/// it in `assets/` and set `Some(include_bytes!("../assets/hero.jpg"))`,
-/// record it in THIRD_PARTY.md and fill [`HERO_CREDIT`].
-pub const HERO_JPEG: Option<&[u8]> = None;
+/// The hero image: Kris Meeke's Citroën DS3 WRC on a gravel forest stage of
+/// the 2015 Wales Rally GB (the year and the country of DiRT Rally's own
+/// Welsh stages). Chris Cox, CC BY 2.0, via Wikimedia Commons
+/// (THIRD_PARTY.md). Cropped and resized for the strip.
+pub const HERO_JPEG: Option<&[u8]> = Some(include_bytes!("../assets/hero.jpg"));
 
-/// The image's credit (author, licence), shown under it when the licence
-/// asks for attribution.
-pub const HERO_CREDIT: &str = "";
+/// The image's credit, shown on it (CC BY asks for attribution).
+pub const HERO_CREDIT: &str = "Photo: Chris Cox, CC BY 2.0";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Tab {
@@ -64,10 +68,11 @@ impl Tab {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Check {
     Empty,
-    /// A known edition, by name.
-    Found(&'static str),
-    /// Why the folder cannot be played (an unknown edition names its
-    /// SHA-256 and the issue link).
+    /// A playable edition: its name and the game folder it is in (the
+    /// chosen folder or its only subfolder).
+    Found(&'static str, PathBuf),
+    /// Why the folder cannot be played: no game, an unknown build (its
+    /// SHA-256 and the report link), or a known build that does not run.
     Problem(String),
 }
 
@@ -77,8 +82,8 @@ pub fn check_game(folder: &str) -> Check {
     if folder.is_empty() {
         return Check::Empty;
     }
-    match edition::find(std::path::Path::new(folder)) {
-        Ok(found) => Check::Found(found.edition.name),
+    match edition::find_playable(std::path::Path::new(folder)) {
+        Ok(found) => Check::Found(found.edition.name, found.root),
         Err(problem) => Check::Problem(problem),
     }
 }
@@ -94,12 +99,15 @@ pub struct Window {
     pub check: Check,
     /// The folder text [`Window::check`] is for.
     checked: String,
-    /// The folder picker (`dialog::pick_folder` on Windows).
+    /// The folder picker.
     pub pick: fn() -> Option<PathBuf>,
     pub hero: Option<TextureHandle>,
-    /// A message that replaces the status line (a failed save).
+    /// A message that replaces the status line (a failed save or copy).
     pub error: Option<String>,
-    /// Play was pressed while ready: the caller saves and closes.
+    /// The private copy being made after Play, while it runs.
+    pub copy: Option<copy::State>,
+    /// Play was pressed while ready: the caller saves, makes the copy and
+    /// closes.
     pub play: bool,
 }
 
@@ -118,13 +126,17 @@ impl Window {
             pick: || None,
             hero: None,
             error: None,
+            copy: None,
             play: false,
         }
     }
 
-    /// A known edition is chosen and every value can be saved.
+    /// A playable edition is chosen, every value can be saved, and no copy
+    /// is running.
     pub fn ready(&self) -> bool {
-        matches!(self.check, Check::Found(_)) && self.form.problems().is_empty()
+        matches!(self.check, Check::Found(..))
+            && self.form.problems().is_empty()
+            && self.copy.is_none()
     }
 
     /// Play (the plate, Enter or the pad's Start): only when ready; else
@@ -132,7 +144,7 @@ impl Window {
     pub fn press_play(&mut self) {
         if self.ready() {
             self.play = true;
-        } else {
+        } else if self.copy.is_none() {
             self.tab = Tab::Play;
         }
     }
@@ -162,6 +174,10 @@ pub fn draw(ui: &mut egui::Ui, w: &mut Window) {
         );
         status(ui, w);
         ui.add_space(6.0);
+        if let Some(state) = w.copy.clone() {
+            copy_panel(ui, &state);
+            return;
+        }
         widgets::tabs_bar(ui, &Tab::NAMES, &mut w.tab);
         ui.add_space(14.0);
         widgets::tab_body(ui, w.tab, |ui| match w.tab {
@@ -169,7 +185,13 @@ pub fn draw(ui: &mut egui::Ui, w: &mut Window) {
             Tab::Picture => picture_tab(ui, w),
         });
     });
-    let hint = "Your game folder is never changed. Settings are saved when you press Play.";
+    let hint = match (&w.copy, &w.check) {
+        (Some(_), _) => "The game starts as soon as the copy is ready.",
+        (None, Check::Found(..)) => {
+            "Your game folder is only read. Settings are saved when you press Play."
+        }
+        (None, _) => "Play starts once the launcher has found your game.",
+    };
     if widgets::footer(ui, layout.footer, hint, w.ready()).clicked() {
         w.press_play();
     }
@@ -178,56 +200,73 @@ pub fn draw(ui: &mut egui::Ui, w: &mut Window) {
 fn draw_hero(ui: &egui::Ui, rect: Rect, hero: Option<&TextureHandle>) {
     let painter = ui.painter();
     if hero.is_none() {
-        // The empty slot until the imagery is researched (HERO_JPEG).
         painter.rect_filled(rect, 0.0, PANEL);
     }
     widgets::hero_image(painter, rect, hero, Crop::Center, BASE);
     if !HERO_CREDIT.is_empty() {
-        painter.text(
-            pos2(rect.left() + 20.0, rect.bottom() - 20.0),
-            Align2::LEFT_BOTTOM,
-            HERO_CREDIT,
-            body(11.0),
-            MUTED,
-        );
+        // A solid backing so the small credit stays readable over the photo.
+        let text = painter.layout_no_wrap(HERO_CREDIT.to_owned(), body(11.0), INK);
+        let at = pos2(rect.left() + 12.0, rect.bottom() - 12.0 - text.size().y);
+        let back = Rect::from_min_size(at, text.size()).expand2(vec2(6.0, 3.0));
+        painter.rect_filled(back, 3.0, BASE);
+        painter.galley(at, text, INK);
     }
 }
 
 fn status(ui: &mut egui::Ui, w: &Window) {
     let problems = w.form.problems();
-    let (text, color) = match (&w.error, &w.check) {
-        (Some(error), _) => (error.clone(), ERROR),
-        (None, Check::Found(_)) if !problems.is_empty() => (problems.join(" "), ERROR),
-        (None, Check::Found(_)) => ("Ready. Press Play or Enter.".to_owned(), MUTED),
-        (None, _) => (
-            "First, show the launcher where the game is.".to_owned(),
-            MUTED,
+    let (text, color) = match (&w.error, &w.copy, &w.check) {
+        (Some(error), _, _) => (error.clone(), ERROR),
+        (None, Some(_), _) => ("Making your private copy of the game.".to_owned(), MUTED),
+        (None, None, Check::Found(..)) if !problems.is_empty() => (problems.join(" "), ERROR),
+        (None, None, Check::Found(..)) => ("Ready. Press Play.".to_owned(), MUTED),
+        (None, None, Check::Problem(_)) => (
+            "The launcher can't play this folder. The reason is below.".to_owned(),
+            ERROR,
         ),
+        (None, None, Check::Empty) => ("Choose your DiRT Rally folder to start.".to_owned(), MUTED),
     };
-    ui.label(RichText::new(text).font(body(14.0)).color(color));
+    ui.add(egui::Label::new(RichText::new(text).font(body(14.0)).color(color)).wrap());
+}
+
+/// The first copy's progress, in place of the tabs.
+fn copy_panel(ui: &mut egui::Ui, state: &copy::State) {
+    ui.add_space(18.0);
+    widgets::heading(ui, "Copying the game");
+    ui.add_space(6.0);
+    let line = match state {
+        copy::State::Copying { done, total } if *total > 0 => copy::amount(*done, *total),
+        copy::State::Copying { .. } => "Counting the game's files.".to_owned(),
+        copy::State::Done { .. } => "Done. Starting the game.".to_owned(),
+        copy::State::Failed(error) => error.clone(),
+    };
+    ui.label(RichText::new(line).font(body(15.0)).color(INK));
+    ui.add_space(8.0);
+    widgets::progress_bar(ui, state.fraction());
+    ui.add_space(10.0);
+    widgets::note(
+        ui,
+        "The launcher plays from its own copy so your game folder is never changed. \
+         This happens once; later starts copy only what changed. From another disk or \
+         a network share the first copy takes a while.",
+    );
 }
 
 fn play_tab(ui: &mut egui::Ui, w: &mut Window) {
-    widgets::heading(ui, "Game");
     if spec_path_row(ui, row("game"), w.form.value_mut("game"), w.pick).changed() {
         w.error = None;
     }
-    let (note, color) = match &w.check {
-        Check::Empty if w.linux => (
-            format!(
-                "Choose the folder with {}. Under Wine, Z:\\ is your Linux root folder.",
-                edition::GAME_EXE
-            ),
-            MUTED,
-        ),
-        Check::Empty => (
-            format!("Choose the folder with {}.", edition::GAME_EXE),
-            MUTED,
-        ),
-        Check::Found(name) => (format!("Found {name}."), ACCENT),
-        Check::Problem(problem) => (problem.clone(), ERROR),
+    // The field's own description says what to choose; this says what was found.
+    let found = match &w.check {
+        Check::Empty => None,
+        Check::Found(name, _) => Some((format!("Found DiRT Rally {name}."), CHALK)),
+        Check::Problem(problem) => Some((problem.clone(), ERROR)),
     };
-    ui.add(egui::Label::new(RichText::new(note).font(body(13.0)).color(color)).selectable(true));
+    if let Some((note, color)) = found {
+        ui.add(
+            egui::Label::new(RichText::new(note).font(body(13.0)).color(color)).selectable(true),
+        );
+    }
     ui.add_space(12.0);
 
     widgets::heading(ui, row("look").label);
@@ -254,7 +293,6 @@ fn play_tab(ui: &mut egui::Ui, w: &mut Window) {
             }
         }
     });
-    widgets::note(ui, row("look").description);
 }
 
 /// A look card's note: its values in words.
@@ -279,15 +317,17 @@ fn picture_tab(ui: &mut egui::Ui, w: &mut Window) {
         changed |= spec_row(ui, row, w.form.value_mut(row.key)).changed();
         ui.add_space(10.0);
     }
+    widgets::note(
+        ui,
+        "Graphics quality is the game's own: change it in the game's Options, under Graphics.",
+    );
     if changed {
         w.form.picture_edited();
     }
 }
 
-#[cfg(windows)]
 pub use app::{Outcome, show};
 
-#[cfg(windows)]
 mod app {
     use std::path::{Path, PathBuf};
     use std::time::Duration;
@@ -299,19 +339,94 @@ mod app {
     use rea_launcher_ui::theme;
     use rea_launcher_ui::widgets;
     use rea_launcher_ui::window::{SIZE, WindowFit};
-    use rea_launcher_win32::{dialog, display, wine, xinput};
 
-    use super::{HERO_JPEG, Window, draw};
+    use super::{Check, HERO_JPEG, Window, draw};
     use crate::config;
+    use crate::copy::{self, CopyJob};
     use crate::palette::{METRICS, PALETTE};
 
     /// How the window ended.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Outcome {
-        /// Play was pressed; the settings are saved.
+        /// Play was pressed; the settings are saved and the copy is made.
         Play,
         /// Closed without Play.
         Closed,
+    }
+
+    /// The pads, as XInput-style bits.
+    #[derive(Default)]
+    struct Pads {
+        #[cfg(target_os = "linux")]
+        js: crate::jspad::Pads,
+    }
+
+    impl Pads {
+        fn buttons(&mut self) -> u16 {
+            #[cfg(target_os = "linux")]
+            {
+                self.js.buttons()
+            }
+            #[cfg(windows)]
+            {
+                rea_launcher_win32::xinput::buttons()
+            }
+            #[cfg(not(any(windows, target_os = "linux")))]
+            {
+                0
+            }
+        }
+    }
+
+    /// The folder picker: the native dialog on Windows, zenity or kdialog
+    /// on Linux (whichever the desktop has).
+    fn pick_folder() -> Option<PathBuf> {
+        const TITLE: &str = "Choose your DiRT Rally folder";
+        #[cfg(windows)]
+        {
+            rea_launcher_win32::dialog::pick_folder(TITLE)
+        }
+        #[cfg(not(windows))]
+        {
+            use std::process::Command;
+            let tries: [(&str, &[&str]); 2] = [
+                (
+                    "zenity",
+                    &["--file-selection", "--directory", "--title", TITLE],
+                ),
+                (
+                    "kdialog",
+                    &["--getexistingdirectory", ".", "--title", TITLE],
+                ),
+            ];
+            for (program, args) in tries {
+                if let Ok(out) = Command::new(program).args(args).output()
+                    && out.status.success()
+                {
+                    let text = String::from_utf8_lossy(&out.stdout).trim().to_owned();
+                    if !text.is_empty() {
+                        return Some(PathBuf::from(text));
+                    }
+                }
+            }
+            None
+        }
+    }
+
+    /// The screen size, for the looks (a Steam Deck's screen picks its look).
+    fn screen() -> Option<(u32, u32)> {
+        #[cfg(windows)]
+        {
+            rea_launcher_win32::display::screen_size()
+        }
+        #[cfg(not(windows))]
+        {
+            let out = std::process::Command::new("xrandr")
+                .arg("--current")
+                .output()
+                .ok()?;
+            crate::start::screen_from_xrandr(&String::from_utf8_lossy(&out.stdout))
+        }
     }
 
     struct App<'a> {
@@ -320,20 +435,35 @@ mod app {
         path: PathBuf,
         /// The `launcher.cfg` text the window's values are saved into.
         text: String,
+        runtime_default: PathBuf,
+        job: Option<CopyJob>,
+        pads: Pads,
         pad: PadNav,
         pending: Vec<Nav>,
         outcome: &'a mut Outcome,
     }
 
     /// Shows the window over `saved` (the `launcher.cfg` text, or `None` on
-    /// the first run) and saves to `path` when Play is pressed.
-    pub fn show(path: &Path, saved: Option<&str>, linux: bool) -> Result<Outcome, String> {
-        // Under Wine the window is created at its final size, with Wine's
-        // DPI scale divided out (read first: it also makes the process DPI
-        // aware before the screen size is taken).
-        let scale = display::wine_dpi_scale();
-        let screen = display::screen_size();
-        let fit = WindowFit::new(SIZE, wine::is_wine(), screen, scale).with_native_fit(true);
+    /// the first run). Play saves to `path`, makes the private copy (into
+    /// the `runtime` setting, or `runtime_default`) with its progress, then
+    /// closes with [`Outcome::Play`].
+    pub fn show(
+        path: &Path,
+        saved: Option<&str>,
+        linux: bool,
+        runtime_default: &Path,
+    ) -> Result<Outcome, String> {
+        let screen = screen();
+        #[cfg(windows)]
+        let fit = {
+            use rea_launcher_win32::{display, wine};
+            let scale = display::wine_dpi_scale();
+            WindowFit::new(SIZE, wine::is_wine(), screen, scale).with_native_fit(true)
+        };
+        // On Linux the desktop scales the window; the X screen may span
+        // several monitors, so it does not size the window.
+        #[cfg(not(windows))]
+        let fit = WindowFit::new(SIZE, false, None, 1.0);
         let options = fit.native_options("DiRT Rally");
         let text = saved.map_or_else(|| config::first_run_text(screen), str::to_owned);
         let mut outcome = Outcome::Closed;
@@ -344,7 +474,7 @@ mod app {
                 theme::install_with(&cc.egui_ctx, &PALETTE, &METRICS);
                 let mut window = Window::new(&text, screen);
                 window.linux = linux;
-                window.pick = || dialog::pick_folder("Choose the folder with drt.exe");
+                window.pick = pick_folder;
                 window.hero =
                     HERO_JPEG.and_then(|jpeg| widgets::load_jpeg(&cc.egui_ctx, "hero", jpeg));
                 Ok(Box::new(App {
@@ -352,6 +482,9 @@ mod app {
                     fit,
                     path: path.to_path_buf(),
                     text: text.clone(),
+                    runtime_default: runtime_default.to_path_buf(),
+                    job: None,
+                    pads: Pads::default(),
                     pad: PadNav::default(),
                     pending: Vec::new(),
                     outcome: &mut outcome,
@@ -363,23 +496,62 @@ mod app {
     }
 
     impl App<'_> {
-        fn save_and_close(&mut self, ctx: &egui::Context) {
+        /// Saves the settings, then starts the private copy.
+        fn save_and_copy(&mut self) {
             let text = self.window.form.save(&self.text);
-            match fsx::write_atomic(&self.path, text) {
-                Ok(()) => {
+            if let Some(dir) = self.path.parent()
+                && let Err(error) = std::fs::create_dir_all(dir)
+            {
+                self.window.error = Some(format!("Cannot save the settings: {error}"));
+                return;
+            }
+            if let Err(error) = fsx::write_atomic(&self.path, &text) {
+                self.window.error = Some(format!("Cannot save the settings: {error}"));
+                return;
+            }
+            self.text = text;
+            let Check::Found(_, root) = &self.window.check else {
+                return;
+            };
+            let runtime = self
+                .window
+                .form
+                .settings()
+                .runtime
+                .unwrap_or_else(|| self.runtime_default.clone());
+            self.window.error = None;
+            self.window.copy = Some(copy::State::Copying { done: 0, total: 0 });
+            self.job = Some(CopyJob::start(root.clone(), runtime));
+        }
+
+        /// Follows the copy: done closes with Play, a failure says why.
+        fn follow_copy(&mut self, ctx: &egui::Context) {
+            let Some(job) = &self.job else {
+                return;
+            };
+            let state = job.state();
+            match &state {
+                copy::State::Done { .. } => {
                     *self.outcome = Outcome::Play;
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
-                Err(error) => {
-                    self.window.error = Some(format!("Cannot save the settings: {error}"));
+                copy::State::Failed(error) => {
+                    self.window.error = Some(format!(
+                        "The copy stopped: {error} Check the free space on that disk, then press Play to try again."
+                    ));
+                    self.window.copy = None;
+                    self.job = None;
+                    return;
                 }
+                copy::State::Copying { .. } => {}
             }
+            self.window.copy = Some(state);
         }
     }
 
     impl eframe::App for App<'_> {
         fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
-            let navs = self.pad.update(xinput::buttons());
+            let navs = self.pad.update(self.pads.buttons());
             pad::inject(ctx, raw, &navs);
             self.pending.extend(navs);
         }
@@ -401,9 +573,10 @@ mod app {
             {
                 self.window.press_play();
             }
+            self.follow_copy(&ctx);
             draw(ui, &mut self.window);
             if std::mem::take(&mut self.window.play) {
-                self.save_and_close(&ctx);
+                self.save_and_copy();
             }
             ctx.request_repaint_after(Duration::from_millis(50));
         }
@@ -434,6 +607,15 @@ mod tests {
         config::parse_args(args).unwrap().0
     }
 
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir()
+            .join(format!("dirtrally-ui-{name}-{}", std::process::id()))
+            .join("Jogos d'Ação");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
     #[test]
     fn the_window_has_a_control_for_every_option_and_no_other() {
         let mut ui = open("");
@@ -459,6 +641,20 @@ mod tests {
     }
 
     #[test]
+    fn the_resolution_row_saves_what_its_flag_sets() {
+        let mut ui = open("");
+        ui.get_by_role_and_label(Role::Tab, "Picture").click();
+        ui.run();
+        *ui.state_mut().form.value_mut("resolution") = "2560x1440".into();
+        ui.run();
+        let saved = ui.state().form.settings();
+        assert_eq!(
+            saved.resolution,
+            flags(&["--resolution", "2560x1440"]).resolution
+        );
+    }
+
+    #[test]
     fn a_size_the_option_refuses_says_what_it_needs() {
         let mut ui = open("");
         ui.state_mut().form = Form::from_text("resolution = huge\n");
@@ -468,15 +664,19 @@ mod tests {
     }
 
     #[test]
-    fn play_waits_for_a_known_game_and_an_unknown_one_is_refused() {
+    fn getting_ready_play_waits_and_an_unknown_build_is_refused() {
         let mut ui = open("");
+        assert!(
+            ui.query_by_label_contains("Choose your DiRT Rally folder")
+                .is_some()
+        );
         assert!(testing::disabled(
             &ui.get_by_role_and_label(Role::Button, "Play")
         ));
 
-        let dir = std::env::temp_dir().join(format!("dirtrally-ui-test-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("drt.exe"), b"not the game").unwrap();
+        let dir = scratch("unknown");
+        std::fs::create_dir_all(dir.join("bin")).unwrap();
+        std::fs::write(dir.join("bin/DirtRally"), b"not the game").unwrap();
         *ui.state_mut().form.value_mut("game") = dir.display().to_string();
         ui.run();
         let digest = rea_launcher::identify::hex(&rea_launcher::identify::sha256(b"not the game"));
@@ -493,7 +693,64 @@ mod tests {
         play.click();
         ui.run();
         assert!(!ui.state().play);
-        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_folder_without_the_game_says_where_to_look() {
+        let mut ui = open("");
+        *ui.state_mut().form.value_mut("game") = scratch("empty").display().to_string();
+        ui.run();
+        assert!(
+            ui.query_by_label_contains("There is no DiRT Rally")
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn while_the_copy_runs_its_progress_replaces_the_tabs_and_play_is_off() {
+        let mut ui = open("");
+        ui.state_mut().copy = Some(copy::State::Copying {
+            done: 12_400_000_000,
+            total: 40_100_000_000,
+        });
+        ui.run();
+        assert!(ui.query_by_label_contains("12.4 of 40.1 GB").is_some());
+        assert!(
+            ui.query_by_label_contains("Making your private copy")
+                .is_some()
+        );
+        assert!(ui.query_by_role_and_label(Role::Tab, "Picture").is_none());
+        assert!(testing::disabled(
+            &ui.get_by_role_and_label(Role::Button, "Play")
+        ));
+        ui.state_mut().press_play();
+        assert!(!ui.state().play);
+    }
+
+    #[test]
+    fn a_failed_copy_says_why() {
+        let mut ui = open("");
+        ui.state_mut().error = Some("Cannot prepare /x: disk full".into());
+        ui.run();
+        assert!(ui.query_by_label_contains("disk full").is_some());
+    }
+
+    /// The owner's copy (env-gated): the window finds it and Play is on.
+    #[test]
+    #[ignore]
+    fn the_owners_copy_makes_the_window_ready() {
+        let Some(dir) = std::env::var_os("DIRTRALLY_GAME_DIR") else {
+            return;
+        };
+        let mut ui = open(&format!("game = {}\n", PathBuf::from(dir).display()));
+        ui.run();
+        assert!(ui.query_by_label_contains("Found DiRT Rally").is_some());
+        assert!(!testing::disabled(
+            &ui.get_by_role_and_label(Role::Button, "Play")
+        ));
+        ui.get_by_role_and_label(Role::Button, "Play").click();
+        ui.run();
+        assert!(ui.state().play);
     }
 
     #[test]

@@ -9,8 +9,8 @@ the whole session when you stop it.
 
 ```sh
 chmod +x DiRTRallyLauncher-*-x86_64.AppImage
-./DiRTRallyLauncher-*-x86_64.AppImage --play --game "/path/to/DiRT Rally"
-./DiRTRallyLauncher-*-x86_64.AppImage --play        # later starts
+./DiRTRallyLauncher-*-x86_64.AppImage               # the settings window, then the game
+./DiRTRallyLauncher-*-x86_64.AppImage --play        # saved settings, no window
 ./DiRTRallyLauncher-*-x86_64.AppImage stop          # from another terminal
 ```
 
@@ -20,8 +20,8 @@ it takes the same commands and options as the zip's helper.
 ## The zip
 
 ```sh
-linux/dirtrally-play --play --game "/path/to/DiRT Rally"
-linux/dirtrally-play --play
+linux/dirtrally-play             # the settings window, then the game
+linux/dirtrally-play --play      # saved settings, no window
 linux/dirtrally-play --check     # checks the game folder, starts nothing
 linux/dirtrally-play status      # running or idle
 linux/dirtrally-play stop
@@ -42,7 +42,7 @@ the game through it. Your settings, the private copy and the game's saves
 stay in your own home folder:
 
 ```sh
-DIRTRALLY_RUN="distrobox enter gaming --" linux/dirtrally-play --play
+DIRTRALLY_RUN="distrobox enter gaming --" linux/dirtrally-play
 ```
 
 Without gamescope the game opens on the desktop's first display, which can
