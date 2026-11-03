@@ -302,6 +302,28 @@ mod program {
         );
     }
 
+    /// An empty HOME is refused before anything is written: no
+    /// launcher.log lands under the working folder.
+    #[test]
+    fn an_empty_home_is_refused_and_writes_nothing() {
+        let cwd = scratch("empty-home");
+        let output = Command::new(env!("CARGO_BIN_EXE_DiRTRallyLauncher"))
+            .args(["--no-window", "--linux"])
+            .current_dir(&cwd)
+            .env("HOME", "")
+            .env_remove("XDG_CONFIG_HOME")
+            .env_remove("XDG_DATA_HOME")
+            .env("XDG_RUNTIME_DIR", &cwd)
+            .env_remove("DISPLAY")
+            .env_remove("WAYLAND_DISPLAY")
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(cli::REFUSED));
+        assert!(text(&output.stderr).starts_with("DiRT Rally: "));
+        let left: Vec<_> = std::fs::read_dir(&cwd).unwrap().flatten().collect();
+        assert!(left.is_empty(), "{left:?}");
+    }
+
     #[test]
     fn settings_only_says_no_window_is_possible_yet() {
         let (output, _) = run("settings", &["--settings", "--linux"]);

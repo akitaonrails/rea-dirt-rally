@@ -69,12 +69,16 @@ mod linux {
             },
             false,
         ));
-        let places = places();
-        let log = Log::new(places.config.join("launcher.log"));
         if let Err(error) = start::checked_home(std::env::var_os("HOME")) {
-            fail(&log, &places, &Stop::other(error), as_command);
+            // No usable HOME, so no launcher.log either: printed (and a
+            // window when a person may be watching).
+            let stop = Stop::other(error);
+            let details = concat!("DiRTRallyLauncher ", env!("CARGO_PKG_VERSION"));
+            rea_launcher_ui::report::fatal(&PALETTE, &METRICS, &stop.message(details), as_command);
             return cli::REFUSED;
         }
+        let places = places();
+        let log = Log::new(places.config.join("launcher.log"));
         log.line(concat!("DiRTRallyLauncher ", env!("CARGO_PKG_VERSION")));
         let invocation = match cli::parse(args) {
             Ok(invocation) => invocation,
