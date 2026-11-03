@@ -13,9 +13,9 @@ repository = "https://github.com/akitaonrails/rea-dirt-rally"
 # change the tag on all three lines, re-run `scripts/sdk-sync` from that SDK
 # checkout and move the `@vX.Y.Z` of the workflows in .github/workflows/build.yml
 # (rea-launcher-sdk docs/playbooks/sdk-change.md).
-rea-launcher = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.3.3" }
-rea-launcher-win32 = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.3.3" }
-rea-launcher-ui = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.3.3" }
+rea-launcher = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.4.1" }
+rea-launcher-win32 = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.4.1" }
+rea-launcher-ui = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.4.1" }
 
 [profile.release]
 panic = "abort"

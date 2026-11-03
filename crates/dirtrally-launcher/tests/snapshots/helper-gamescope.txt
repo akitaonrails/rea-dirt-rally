@@ -2,20 +2,20 @@
 
 ## Recommended (first run)
 starting at 3840x2160, scaler linear
-SDL_GAMECONTROLLER_ALLOW_BACKGROUND_EVENTS=1 SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 REA_INNER_MODE=native REA_GAME_ENV_FILE=<home>/.config/dirtrally-launcher/game.env REA_GAME_PROCS= REA_GAME_SETTLE=3 REA_TEST=1 gamescope -W 3840 -H 2160 -w 3840 -h 2160 -f -S fit -F linear -- sh <home>/.config/dirtrally-launcher/inner.sh <home>/DiRTRallyLauncher --no-window
+SDL_GAMECONTROLLER_ALLOW_BACKGROUND_EVENTS=1 SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 REA_INNER_MODE=native REA_GAME_ENV_FILE=<home>/.config/dirtrally-launcher/game.env REA_GAME_PROCS= REA_GAME_SETTLE=3 REA_GAME_PREFIX= REA_TEST=1 gamescope -W 3840 -H 2160 -w 3840 -h 2160 -f -S fit -F linear -- sh <home>/.config/dirtrally-launcher/inner.sh <home>/DiRTRallyLauncher --no-window
 
 ## Original
 starting at 3840x2160, scaler linear
-SDL_GAMECONTROLLER_ALLOW_BACKGROUND_EVENTS=1 SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 REA_INNER_MODE=native REA_GAME_ENV_FILE=<home>/.config/dirtrally-launcher/game.env REA_GAME_PROCS= REA_GAME_SETTLE=3 REA_TEST=1 gamescope -W 3840 -H 2160 -w 3840 -h 2160 -f -S fit -F linear -- sh <home>/.config/dirtrally-launcher/inner.sh <home>/DiRTRallyLauncher --no-window
+SDL_GAMECONTROLLER_ALLOW_BACKGROUND_EVENTS=1 SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 REA_INNER_MODE=native REA_GAME_ENV_FILE=<home>/.config/dirtrally-launcher/game.env REA_GAME_PROCS= REA_GAME_SETTLE=3 REA_GAME_PREFIX= REA_TEST=1 gamescope -W 3840 -H 2160 -w 3840 -h 2160 -f -S fit -F linear -- sh <home>/.config/dirtrally-launcher/inner.sh <home>/DiRTRallyLauncher --no-window
 
 ## Steam Deck
 starting at 1280x800, scaler linear
-SDL_GAMECONTROLLER_ALLOW_BACKGROUND_EVENTS=1 SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 REA_INNER_MODE=native REA_GAME_ENV_FILE=<home>/.config/dirtrally-launcher/game.env REA_GAME_PROCS= REA_GAME_SETTLE=3 REA_TEST=1 gamescope -W 1280 -H 800 -w 1280 -h 800 -f -S fit -F linear -- sh <home>/.config/dirtrally-launcher/inner.sh <home>/DiRTRallyLauncher --no-window
+SDL_GAMECONTROLLER_ALLOW_BACKGROUND_EVENTS=1 SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 REA_INNER_MODE=native REA_GAME_ENV_FILE=<home>/.config/dirtrally-launcher/game.env REA_GAME_PROCS= REA_GAME_SETTLE=3 REA_GAME_PREFIX= REA_TEST=1 gamescope -W 1280 -H 800 -w 1280 -h 800 -f -S fit -F linear -- sh <home>/.config/dirtrally-launcher/inner.sh <home>/DiRTRallyLauncher --no-window
 
 ## Hand-written size 2560x1440
 starting at 2560x1440, scaler linear
-SDL_GAMECONTROLLER_ALLOW_BACKGROUND_EVENTS=1 SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 REA_INNER_MODE=native REA_GAME_ENV_FILE=<home>/.config/dirtrally-launcher/game.env REA_GAME_PROCS= REA_GAME_SETTLE=3 REA_TEST=1 gamescope -W 2560 -H 1440 -w 2560 -h 1440 -f -S fit -F linear -- sh <home>/.config/dirtrally-launcher/inner.sh <home>/DiRTRallyLauncher --no-window
+SDL_GAMECONTROLLER_ALLOW_BACKGROUND_EVENTS=1 SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 REA_INNER_MODE=native REA_GAME_ENV_FILE=<home>/.config/dirtrally-launcher/game.env REA_GAME_PROCS= REA_GAME_SETTLE=3 REA_GAME_PREFIX= REA_TEST=1 gamescope -W 2560 -H 1440 -w 2560 -h 1440 -f -S fit -F linear -- sh <home>/.config/dirtrally-launcher/inner.sh <home>/DiRTRallyLauncher --no-window
 
 ## Recommended, --resolution 1280x720 for one run
 starting at 1280x720, scaler linear
-SDL_GAMECONTROLLER_ALLOW_BACKGROUND_EVENTS=1 SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 REA_INNER_MODE=native REA_GAME_ENV_FILE=<home>/.config/dirtrally-launcher/game.env REA_GAME_PROCS= REA_GAME_SETTLE=3 REA_TEST=1 gamescope -W 1280 -H 720 -w 1280 -h 720 -f -S fit -F linear -- sh <home>/.config/dirtrally-launcher/inner.sh <home>/DiRTRallyLauncher --no-window --resolution 1280x720
+SDL_GAMECONTROLLER_ALLOW_BACKGROUND_EVENTS=1 SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 REA_INNER_MODE=native REA_GAME_ENV_FILE=<home>/.config/dirtrally-launcher/game.env REA_GAME_PROCS= REA_GAME_SETTLE=3 REA_GAME_PREFIX= REA_TEST=1 gamescope -W 1280 -H 720 -w 1280 -h 720 -f -S fit -F linear -- sh <home>/.config/dirtrally-launcher/inner.sh <home>/DiRTRallyLauncher --no-window --resolution 1280x720
