@@ -1,5 +1,12 @@
 # Changelog
 
+
+## Unreleased
+
+### Changed
+
+- Replaced placeholder launcher icon with custom high-contrast 256×256 DiRT Rally forest-stage artwork for Windows executable and Linux AppImage shortcuts.
+
 All notable changes to the DiRT Rally launcher. Versions are git tags
 (`vX.Y.Z`) matching the `dirtrally-launcher` crate version.
 
